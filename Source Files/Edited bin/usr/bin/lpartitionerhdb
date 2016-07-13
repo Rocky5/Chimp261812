@@ -1,0 +1,127 @@
+#!/bin/sh
+
+Colour='echo -n -e \033[44;37m'
+TMP=/tmp/lpart.tmp
+
+TMPHDD=/tmp/hddsizeconfig.tmp
+NUMBERS=""
+get_numbers () {
+	dialog --cancel-label "Finish"  --default-item "$2" --menu "$1" 0 40 0 "1" "" "2" "" "3" "" "4" "" "5" "" "6" "" "7" "" "8" "" "9" "" "0" "" "Backspace" "" 2>"$TMP"
+	[ "$?" != 0 ] && { NUMBERS="$1"; return 0; }
+	local ANSWER=`cat "$TMP"`
+	case $ANSWER in
+		Backspace)
+			get_numbers "${1%[!:]}" "$ANSWER"; ;;
+		*)
+			get_numbers "$1$ANSWER" "$ANSWER"; ;;
+	esac
+	return 0
+}
+
+valid_size () {
+        [ -n "$1" ] || return 1
+        [ -n "$2" ] || return 1
+        echo "$1" | grep -q "^[1-9][0-9]**$" || return 1
+        [ "$1" -ge 0 -a "$1" -le "$2" ] || return 1
+        
+        return 0
+}
+
+get_size() {
+totalsize=`cat /proc/ide/hdb/capacity`
+(( totalsize = totalsize*512 - 8*1024*1024*1024 ))
+(( totalsize = `echo $totalsize | awk '{ printf ("%8d",$1/1024/1024/1024) }'`))
+get_numbers "MAX is 100%\nF Partition Percentage :" "1"
+desiredsize=`echo "$NUMBERS" | cut -d ':' -f 2`
+valid_size "$desiredsize" "100" || { dialog --msgbox "Invalid size\nUsing 50% instead." 0 0 ; desiredsize="50" ; }
+clear
+return 0
+rm -f "$TMPHDD"
+}
+
+choose_partitionsizes() {
+i=10
+totalsize=`cat /proc/ide/hdb/capacity`
+(( totalsize = totalsize*512 - 8*1024*1024*1024 ))
+(( sizeincrement = totalsize/10 ))
+(( fsize=i*sizeincrement/100 ))
+(( gsize=totalsize-i*sizeincrement/100 ))
+clear
+while [ $i -lt 110 ]
+do
+(
+(( fsizedisp = fsize/1024/1024 ))
+(( gsizedisp = gsize/1024/1024 ))
+cat << EOF
+XXX
+$i
+Estimated F partition size:$fsizedisp MB
+Estimated G partition size:$gsizedisp MB
+Press Right arrow to increase size.
+Press Left arrow to decrease size.
+XXX
+EOF
+) | dialog \
+        --title "Choose Partition Sizes" \
+        --gauge "Choose Size" 10 80 0 
+sleep 1
+  read -sn1 a
+  if [[ "$a" == "" ]]
+  then	
+	break
+  fi 	
+  test "$a" == `echo -en "\e"` || continue
+  read -sn1 a
+  test "$a" == "[" || continue
+  read -sn1 a
+  case "$a" in
+    A)  break ;;
+    B)  ;;
+    C)  (( i = i + 10 )) 
+	(( fsize = i*sizeincrement/100 ))
+	(( gsize = totalsize-i*sizeincrement/100 )) ;;
+    D)  (( i = i - 10 )) 
+	(( fsize = i*sizeincrement/100 ))
+	(( gsize = totalsize-i*sizeincrement/100 )) ;;
+esac
+done
+}
+lpart_menu() {
+TMP=/tmp/lparthdb_menu.tmp
+dialog --nocancel  --title "Master HDD partitioner" --menu "Choose an option" 0 0 0\
+		1 "F is capped at 137GB" \
+		2 "F occupies all available space" \
+		3 "G occupies space beyond 137GB" \
+		4 "F and G splits space evenly" \
+		5 "Custom F size, G gets the rest" \
+		6 "Go back" \
+2> /tmp/lparthdb_menu
+lparthdb_menu=`cat /tmp/lparthdb_menu`
+case $lparthdb_menu in
+	1)	
+		dialog --defaultno --yesno "Confirm format?" 0 0
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 0; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		main_menu ;;
+	2)	
+		dialog --defaultno --yesno "Confirm format?" 0 0
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 1; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		main_menu ;;
+	3)	
+		dialog --defaultno --yesno "Confirm format?" 0 0
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 2; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		main_menu ;;
+	4)	
+		dialog --defaultno --yesno "Confirm format?" 0 0
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 3; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		main_menu ;;
+	5)	
+		get_size
+		dialog --defaultno --yesno "Confirm format?" 0 0
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper customfg /dev/hdb $desiredsize; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		main_menu ;;
+	6)	
+		return;;
+	*) ;;
+esac
+}
+lpart_menu

@@ -1,0 +1,396 @@
+#!/bin/sh
+
+Colour='echo -n -e \033[44;37m'
+FatX_BS=512
+F_START=15633072
+G_START=268435456
+CACHE_SIZE=1500
+C_SIZE=1000
+let my_tmp=0
+full_clone="$1"
+TMP=/tmp/lpart.tmp
+TMPHDD=/tmp/hddsizeconfig.tmp
+NUMBERS=""
+
+
+gcd ()
+{
+  dividend=$1
+  divisor=$2
+  remainder=1
+  until [ "$remainder" -eq 0 ]
+  do
+	let "remainder = $dividend % $divisor"
+	dividend=$divisor
+	divisor=$remainder
+  done                    # Euclid's algorithm
+}                         # Last $dividend is the gcd.
+
+/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
+lockhdb=$(cat /tmp/hdlock)
+if [ -n "$lockhdb" ]; then
+	slave_lock_status="locked"
+	rm -f /tmp/hdlock > /dev/null 2>&1
+fi
+
+get_size() {
+#totalsize=`cat /proc/ide/hda/capacity`
+# (( totalsize = totalsize*512 - 8*1024*1024*1024 ))
+# (( totalsize = `echo $totalsize | awk '{ printf ("%8d",$1/1024/1024/1024) }'`))
+get_numbers "MAX is 100%\nF Partition Percentage :" "1"
+desiredsize=`echo "$NUMBERS" | cut -d ':' -f 2`
+valid_size "$desiredsize" "100" || { dialog --msgbox "Invalid size\nUsing 50% instead." 0 0 ; desiredsize="50" ; }
+clear
+return 0
+rm -f "$TMPHDD"
+}
+
+get_numbers () {
+dialog --cancel-label "Finish"  --default-item "$2" --menu "$1" 0 40 0 "1" "" "2" "" "3" "" "4" "" "5" "" "6" "" "7" "" "8" "" "9" "" "0" "" "Backspace" "" 2>"$TMP"
+[ "$?" != 0 ] && { NUMBERS="$1"; return 0; }
+local ANSWER=`cat "$TMP"`
+case $ANSWER in
+	Backspace)
+		get_numbers "${1%[!:]}" "$ANSWER"; ;;
+	*)
+		get_numbers "$1$ANSWER" "$ANSWER"; ;;
+esac
+}
+
+valid_size () {
+	[ -n "$1" ] || return 1
+	[ -n "$2" ] || return 1
+	echo "$1" | grep -q "^[1-9][0-9]**$" || return 1
+	[ "$1" -ge 0 -a "$1" -le "$2" ] || return 1
+
+	return 0
+}
+
+is_fatx() {
+sig=$(dd if=$1 bs=4 count=1 2>/dev/null)
+if [ "$sig" = "FATX" ]; then
+	return 0
+else
+	return 1
+fi
+}
+
+has_parttable() {
+sig=$(dd if=$1 bs=1 count=8 skip=4 2>/dev/null)
+if [ "$sig" = "PARTINFO" ]; then
+	return 0
+else
+	return 1
+fi
+}
+
+prepare_hd () {
+local t=$1
+local h=$2
+local s=$3
+# just create the basic structre, 512k byte for Sys, X, Y, Z, C, E, F, G
+
+dd if=$h of=$t bs=512k count=1 > /dev/null 2>&1
+dd if=$s of=$t seek=1 bs=512k count=1 > /dev/null 2>&1
+dd if=$s of=$t seek=1501 bs=512k count=1 > /dev/null 2>&1
+dd if=$s of=$t seek=3001 bs=512k count=1 > /dev/null 2>&1
+dd if=$s of=$t seek=4501 bs=512k count=1 > /dev/null 2>&1
+dd if=$s of=$t seek=5501 bs=512k count=1 > /dev/null 2>&1
+dd if=$s of=$t seek=15633072 bs=512 count=1k > /dev/null 2>&1
+dd if=$s of=$t seek=268435456 bs=512 count=1k > /dev/null 2>&1
+}
+
+mini_clone_fg () {
+#only clone the signature sector of the F: and G:
+local s=$1
+local t=$2
+dd if=$s of=$t skip=15633072 seek=15633072 bs=512 count=1 > /dev/null 2>&1
+dd if=$s of=$t skip=268435456 seek=268435456 bs=512 count=1 > /dev/null 2>&1
+}
+
+progress_dd () {
+local s=$1
+local t=$2
+local BS_Size="$3"
+local Seek="$4"
+local Count="$6"
+local t_file=$$.$my_tmp
+
+if [ "$no_progress" == "yes" ]; then
+	watch -t -n 2 killall -USR1 dd & 
+	clear ; echo -e "\n" & dd if=$s of=$t $BS_Size $Seek $Count
+	killall watch
+else
+	/usr/bin/pv -w 75 $s | dd of=$t $BS_Size $Seek $Count
+	sleep 3
+	clear
+	return 0
+fi
+}
+
+clone_parts() {
+dialog --defaultno --yesno "Confirm format?" 0 0
+test $? -eq 1 && return;
+$Colour
+clear
+sleep 1
+# Zero Partition table
+dd if=/dev/zero of=$TARGET bs=1 count=268 2> /dev/null
+if [ "$parts_to_clone_part_type" == "yes" ] ; then
+	if [ "$part_type_custom" == "yes" ] ; then
+		dialog --infobox "Slave HD is being formatted.\nPlease wait..." 0 0
+		xboxdumper prepare $TARGET 0 > /tmp/hd_format.log
+		dialog --infobox "Formatting F & G partitions.\nPlease wait..." 0 0
+		xboxdumper customfg $TARGET $desiredsize > /tmp/hd_format.log
+	else
+		dialog --infobox "Slave HD is being formatted.\nPlease wait..." 0 0
+		xboxdumper prepare $TARGET $part_type > /tmp/hd_format.log
+	fi
+else
+	dialog --infobox "Slave HD is being formatted.\nPlease wait..." 0 0
+	xboxdumper prepare $TARGET 0 > /tmp/hd_format.log
+fi
+hdparm -z $TARGET > /dev/null 2>&1
+$Colour
+#dd if=$SRC of=/tmp/before_clone.img bs=1 count=268
+for i in $1; do
+case $i in
+	*C*) 	clear ;
+			dd if=$TARGET bs=512 count=1 2> /dev/null | hexdump | grep "0000 8000" | awk '{ if (NR == 2) print $5 $4" "$7 $6; }' | while read POFFSET PSIZE ;
+			do clear ;
+			#######################################################
+			Partition_Offset=$((0x$POFFSET))
+			Partition_Size=$((0x$PSIZE))
+			gcd $Partition_Offset $Partition_Size
+			let "BS=$dividend"
+			#######################################################
+			echo -e "\n" ;
+			echo -e " Cloning Status: Cloning C Partition.";
+#disabled	echo -e "\n Byte Size = $(($FatX_BS*$BS))\n Partition Information:\n Offset: $POFFSET\n Size: $PSIZE\n" ;
+			dd if=${SRC}51 bs=$(($FatX_BS*$BS)) count=$(($Partition_Size/$BS)) 2>/dev/null | pv -w 75 -s $(($FatX_BS*$Partition_Size)) | dd of=$TARGET bs=$(($FatX_BS*$BS)) seek=$(($Partition_Offset/$BS)) 2>/dev/null
+			done || return 1 ;;
+			#######################################################
+
+	*E*) 	clear ;
+			dd if=$TARGET bs=512 count=1 2> /dev/null | hexdump | grep "0000 8000" | awk '{ if (NR == 1) print $5 $4" "$7 $6; }' | while read POFFSET PSIZE ;
+			do clear ;
+			#######################################################
+			Partition_Offset=$((0x$POFFSET))
+			Partition_Size=$((0x$PSIZE))
+			gcd $Partition_Offset $Partition_Size
+			let "BS=$dividend"
+			#######################################################
+			echo -e "\n" ;
+			echo -e " Cloning Status: Cloning E Partition.";
+#disabled	echo -e "\n Byte Size = $(($FatX_BS*$BS))\n Partition Information:\n Offset: $POFFSET\n Size: $PSIZE\n" ;
+			dd if=${SRC}50 bs=$(($FatX_BS*$BS)) count=$(($Partition_Size/$BS)) 2>/dev/null | pv -w 75 -s $(($FatX_BS*$Partition_Size)) | dd of=$TARGET bs=$(($FatX_BS*$BS)) seek=$(($Partition_Offset/$BS)) 2>/dev/null
+			done || return 1 ;;
+			#######################################################
+
+	*F*) 	dd if=$SRC bs=1 skip=208 count=32 seek=208 of=$TARGET 2>/dev/null ;
+			dd if=$TARGET bs=512 count=1 2> /dev/null | hexdump | grep "0000 8000" | awk '{ if (NR == 6) print $5 $4" "$7 $6; }' | while read POFFSET PSIZE ;
+			do clear ;
+			#######################################################
+			Partition_Offset=$((0x$POFFSET))
+			Partition_Size=$((0x$PSIZE))
+			gcd $Partition_Offset $Partition_Size
+			let "BS=$dividend"
+			#######################################################
+			echo -e "\n" ;
+			echo -e " Cloning Status: Cloning F Partition.";
+#disabled	echo -e "\n Byte Size = $(($FatX_BS*$BS))\n Partition Information:\n Offset: $POFFSET\n Size: $PSIZE\n" ;
+			dd if=${SRC}55 bs=$(($FatX_BS*$BS)) count=$(($Partition_Size/$BS)) 2>/dev/null | pv -w 75 -s $(($FatX_BS*$Partition_Size)) | dd of=$TARGET bs=$(($FatX_BS*$BS)) seek=$(($Partition_Offset/$BS)) 2>/dev/null
+			done || return 1 ;;
+			#######################################################	
+
+	*G*) 	dd if=$SRC bs=1 skip=240 count=32 seek=240 of=$TARGET 2>/dev/null ;
+			dd if=$TARGET bs=512 count=1 2> /dev/null | hexdump | grep "0000 8000" | awk '{ if (NR == 6) print $5 $4" "$7 $6; }' | while read POFFSET PSIZE ;
+			do clear ;
+			#######################################################
+			Partition_Offset=$((0x$POFFSET))
+			Partition_Size=$((0x$PSIZE))
+			gcd $Partition_Offset $Partition_Size
+			let "BS=$dividend"
+			#######################################################
+			echo -e "\n" ;
+			echo -e " Cloning Status: Cloning G Partition.";
+#disabled	echo -e "\n Byte Size = $(($FatX_BS*$BS))\n Partition Information:\n Offset: $POFFSET\n Size: $PSIZE\n" ;
+			dd if=${SRC}56 bs=$(($FatX_BS*$BS)) count=$(($Partition_Size/$BS)) 2>/dev/null | pv -w 75 -s $(($FatX_BS*$Partition_Size)) | dd of=$TARGET bs=$(($FatX_BS*$BS)) seek=$(($Partition_Offset/$BS)) 2>/dev/null
+			done || return 1 ;;
+			#######################################################	
+
+	*Z*) 	dd if=$SRC bs=1 skip=272 count=224 seek=272 of=$TARGET 2>/dev/null ;
+			clear ;
+			sleep 1 ;
+			echo -e "\n" ;
+			echo -e " Cloning Status: Formatting G partition.\n Please wait..." ;
+			xboxdumper preparegrest $TARGET > /dev/null 2>&1 ;;
+esac
+done
+clear
+#dd if=${TARGET} of=/tmp/after_clone.img bs=1 count=268
+finished_clone_menu
+}
+
+finished_clone_menu() {
+dialog --title "Cloning complete" --yesno "Lock slave HD?" 0 0 ;
+test $? -eq 1 && return;
+dialog --infobox "Please wait..." 3 20 ;
+echo "y" | hdtool2 -a -d $TARGET -o LOCK > /tmp/hdtool2.log
+Check_Lock_Status=`grep "Command completed successfully" /tmp/hdtool2.log`
+if [ -n "$Check_Lock_Status" ]; then
+	dialog --infobox "Slave Hard drive locked successfully." 3 41 ;
+	rm -f /tmp/hdtool2.log > /dev/null 2>&1
+	sleep 3
+else
+	dialog --infobox "Slave Hard drive locked failed." 3 35 ;
+	rm -f /tmp/hdtool2.log > /dev/null 2>&1
+	sleep 3
+fi
+return;
+}
+
+choose_parts() {
+if [ "$full_clone" == "" ]; then
+	local cloneab_menu=1
+	dialog --nocancel --title "Partitions" --radiolist "What partitions would you like to clone?" 0 0 0 \
+		"1" "C & E" on \
+		"2" "C, E & F" off \
+		"3" "C, E, F & G" off \
+		"4" "C, E, F & G takes remaining space" off \
+		"5" "Advanced" off \
+		2> /tmp/cloneab_menu
+	case $? in
+		0)	parts_to_clone=$(cat /tmp/cloneab_menu);;
+	esac
+	case $parts_to_clone in
+		1) parts_to_clone_part_type="yes" ;;
+		2) parts_to_clone="\"C\" \"E\" \"F\"" ;;
+		3) parts_to_clone="\"C\" \"E\" \"F\" \"G\"" ;;
+		4) parts_to_clone="\"C\" \"E\" \"F\" \"Z\"" ;;
+		5) parts_to_clone_advanced="yes" ;;
+	esac
+	rm /tmp/cloneab_menu > /dev/null 2>&1
+	if [ "$parts_to_clone_advanced" == "yes" ] ; then
+		# ask what partitions to clone
+		dialog --nocancel --checklist "Advanced cloning" 0 26 0 \
+		"C" "C-Partition" off \
+		"E" "E-Partition" off \
+		"F" "F-Partition" off \
+		"G" "G-Partition" off \
+		2> /tmp/cloneab_menu
+		case $? in
+		0 ) parts_to_clone=$(cat /tmp/cloneab_menu);;
+		esac
+		rm /tmp/cloneab_menu > /dev/null 2>&1
+		clear
+	fi
+	if [ "$parts_to_clone_part_type" == "yes" ] ; then
+		parts_to_clone="\"C\" \"E\""
+		local cloneab_menu=1
+		# ask what partition type to have for F & G
+		dialog --nocancel --title "Extra Partition Setup" --radiolist "How would you like your partitions setup?" 0 0 0 \
+			"1" "F is capped at 137GB" on \
+			"2" "F occupies all available space" off \
+			"3" "G occupies space beyond 137GB" off \
+			"4" "F and G splits space evenly" off \
+			"5" "Custom F size, G gets the rest" off \
+			2> /tmp/cloneab_menu
+		case $? in
+			0)	part_type=$(cat /tmp/cloneab_menu);;
+		esac
+		case $part_type in
+			1) part_type="0";;
+			2) part_type="1";;
+			3) part_type="2";;
+			4) part_type="3";;
+			5) part_type_custom="yes";;
+		esac
+		rm /tmp/cloneab_menu > /dev/null 2>&1
+		if [ "$part_type_custom" == "yes" ] ; then get_size ; fi ;
+	fi
+	clear
+	return
+fi
+}
+
+choose_style() {
+local cloneab_menu=2
+dialog --nocancel --title "HD cloning from Master to Slave" --radiolist "How would you like to clone the HD?" 0 0 0 \
+	"1" "Full Disk (Byte by Byte)" off \
+	"2" "Selective (Select Partitions)" on \
+	2> /tmp/cloneab_menu
+case $? in
+ 0) cloneab_menu=$(cat /tmp/cloneab_menu);;
+esac
+
+case $cloneab_menu in
+ *1*) full_clone="full";;
+esac
+clear
+return
+}
+
+
+choose_progress() {
+local cloneab_menu=2
+dialog --nocancel --title "HD cloning from Master to Slave" --radiolist "How would you like to monitor the cloning progress?" 0 0 0 \
+	"1" "Periodically Show Progress. (every 30secs)" off \
+	"2" "Progress bar & Information." on \
+	2> /tmp/cloneab_menu
+case $? in
+ 0) cloneab_menu=$(cat /tmp/cloneab_menu);;
+esac
+
+case $cloneab_menu in
+ *1*) no_progress="yes";;
+esac
+clear
+return
+}
+
+#starts here
+if [ "$slave_lock_status" == "locked" ] ; then
+	dialog --infobox "Slave HD is locked.\nPlease unlock the HD first." 0 0
+	sleep 3
+	return
+fi
+
+if [ -e /dev/hda ]; then
+	SRC=/dev/hda
+else
+	SRC=/dev/zero
+	DD_OPTION="count=100000"
+fi
+
+if [ -e /dev/hdb ]; then
+	TARGET=/dev/hdb
+else
+	TARGET=/dev/null
+fi
+
+
+hdparm -z $TARGET > /dev/null 2>&1
+choose_style
+#choose_progress
+
+if [ "$full_clone" == "full" ]; then
+	dialog --defaultno --yesno "Confirm format?" 0 0
+	test $? -eq 1 && return;
+		$Colour
+	#######################################################
+	Partition_Size=$(cat /proc/ide/ide0/hda/capacity)
+	#######################################################
+	clear
+	echo -e "\n"
+	echo -e "Cloning Status: Full HD clone."
+	/usr/bin/pv -w 75 $SRC | dd of=$TARGET bs=512 2>/dev/null
+	finished_clone_menu
+	#######################################################	
+else
+	choose_parts
+	clone_parts "$parts_to_clone"
+fi
+fi
+fi
+clear

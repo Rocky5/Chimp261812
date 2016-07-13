@@ -1,0 +1,47 @@
+#!/bin/sh 
+
+if [ "$1" != "quiet" ]; then
+
+if [ -b /dev/hda ]; then
+#/sbin/hdparm -I /dev/hda | grep "Security level high" > /tmp/hdlock
+/usr/bin/hdsecinfo /dev/hda | grep "Security level : high" > /tmp/hdlock
+lockhda=$(cat /tmp/hdlock)
+if [ -z "$lockhda" ]; then 
+echo "Unlocked" > /tmp/hdlock
+lockhda=$(cat /tmp/hdlock)
+else
+echo "Locked" > /tmp/hdlock
+lockhda=$(cat /tmp/hdlock)
+fi
+echo -e "(Master Drive) /dev/hda:\n" > /tmp/hdinfo
+/sbin/hdparm -I /dev/hda | grep "Model Number" >> /tmp/hdinfo
+/sbin/hdparm -I /dev/hda | grep "Serial Number" >> /tmp/hdinfo
+echo -e "\nLock Status: $lockhda" >> /tmp/hdinfo
+echo -e "\n" >> /tmp/hdinfo
+fi
+
+if [ -b /dev/hdb ]; then
+#/sbin/hdparm -I /dev/hdb | grep "Security level high" > /tmp/hdlock
+/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
+lockhdb=$(cat /tmp/hdlock)
+if [ -z "$lockhdb" ]; then 
+echo "Unlocked" > /tmp/hdlock
+lockhdb=$(cat /tmp/hdlock)
+else
+echo "Locked" > /tmp/hdlock
+lockhdb=$(cat /tmp/hdlock)
+fi
+echo -e "(Slave Drive) /dev/hdb:\n" >> /tmp/hdinfo
+/sbin/hdparm -I /dev/hdb | grep "Model Number" >> /tmp/hdinfo
+/sbin/hdparm -I /dev/hdb | grep "Serial Number" >> /tmp/hdinfo
+echo -e "\nLock Status: $lockhdb" >> /tmp/hdinfo
+echo -e "\n" >> /tmp/hdinfo
+fi
+
+if [ -e /tmp/hdinfo ]; then
+out=$(cat /tmp/hdinfo)
+dialog --title "Connected IDE devices" --msgbox "$out" 0 0
+rm /tmp/hdinfo
+rm /tmp/hdlock
+fi
+fi

@@ -1,0 +1,400 @@
+#!/bin/sh
+#Disable the bloody cursor, used when exiting shell script, as I enable the cursor for that.
+echo -n -e "\033[?25l"
+
+###############################################################################################################
+changelogpage1="
+\n1. Redone the menus.
+\n2. Added lock master HDD.
+\n(not sure why its not there by default)
+\n3. Added format extra partitions for slave drive.
+\n4. Changed buffer size back to 512kb, as anything above this value will result in error 13.
+\n5. Removed -d from hdtool in lockhda & lockhdb as hdtool doesn't use -d.
+\n6. Fixed the Pipe Viewer (Progress bar you see when cloning a HDD) fits the screen better.
+\n7. Also padded the top of the screen for the above & the no progress variant.
+\n(was required to compensate for overscan)
+\n8. Changed the menu system in lpartitionerhda & lpartitionerhdb, stops the error about line 106.
+\n9. Changed how the IDE information is gathered.\n(its a lot cleaner looking)
+\n10. Moved the formating of the slave hd untill after the user chooses the options.
+\n(saves on time for me testing things & means the user can exit before formating the slave drive)"
+changelogpage2="
+\n11. Removed the bloody flashing cursor!
+\n12. Option to lock the slave hd after the cloning procedure is complete.
+\n13. Changed the shell background colour for Linux shell & for all other instances.
+\n14. Fixed the scanpartitions shell script, now mounts the drives and added a umount version.
+\n(note this isnt used, but I just fixed it anyways.)
+\n15. Added support for E:\eeprom.bin on the xbox fatx partition.
+\n(ie, before you launch chimp & its case sensitive.)
+\n16. Advanced settings, for the Master HD.
+\n(Enable in settings)
+\n17. Added a more informative error screen for no partition table found.
+\n18. Updated cloning to dynamically get the byte size.
+\n(faster cloning depending on the partition size)
+\n19. New cloning options.
+\n20. Shutdown & Restart confirm dialogues.
+\n21. Probably more changes, but lost track. :/
+"
+###############################################################################################################
+slave_lock_status() {
+#/sbin/hdparm -I /dev/hdb | grep "Security level high" > /tmp/hdlock
+/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
+lockhdb=$(cat /tmp/hdlock)
+if [ -z "$lockhdb" ]; then
+	echo "Unlocked" > /tmp/hdlock
+	lockhdb=$(cat /tmp/hdlock)
+	rm -f /tmp/hdlock > /dev/null 2>&1
+else
+	echo "Locked" > /tmp/hdlock
+	lockhdb=$(cat /tmp/hdlock)
+	rm -f /tmp/hdlock > /dev/null 2>&1
+fi
+}
+master_lock_status() {
+#/sbin/hdparm -I /dev/hda | grep "Security level high" > /tmp/hdlock
+/usr/bin/hdsecinfo /dev/hda | grep "Security level : high" > /tmp/hdlock
+lockhda=$(cat /tmp/hdlock)
+if [ -z "$lockhda" ]; then
+	echo "Unlocked" > /tmp/hdlock
+	lockhda=$(cat /tmp/hdlock)
+	rm -f /tmp/hdlock > /dev/null 2>&1
+else
+	echo "Locked" > /tmp/hdlock
+	lockhda=$(cat /tmp/hdlock)
+	rm -f /tmp/hdlock > /dev/null 2>&1
+fi
+}
+###############################################################################################################
+reboot() {
+	dialog --infobox "Restarting Xbox" 3 19 ;
+	/sbin/reboot -d 3 -f
+}
+shutdown() {
+	dialog --infobox "Shutting Down Xbox" 3 22 ;
+	/sbin/poweroff -d 3 -f
+}
+###############################################################################################################
+slave_partition_status() {
+/usr/bin/xboxdumper listpartitions /dev/hdb 0 0 | grep "Error in listing partitions" > /tmp/partinfo
+partinfo=$(cat /tmp/partinfo)
+if [ -z "$partinfo" ]; then
+	dialog --msgbox "`xboxdumper listpartitions /dev/hdb`" 0 0
+	rm -f /tmp/partinfo > /dev/null 2>&1
+else
+	dialog --title "ERROR - XBP Partition table not found" --msgbox "\n1. This HD was formatted with UnleashX or EvolutionX.\n   Note: Standard Xbox partitions will be present.\n\n2. If this is a new HD then there is no partition\n   table." 0 0
+	rm -f /tmp/partinfo > /dev/null 2>&1
+fi
+}
+master_partition_status() {
+/usr/bin/xboxdumper listpartitions /dev/hda 0 0 | grep "Error in listing partitions" > /tmp/partinfo
+partinfo=$(cat /tmp/partinfo)
+if [ -z "$partinfo" ]; then
+	dialog --msgbox "`xboxdumper listpartitions /dev/hda`" 0 0
+	rm -f /tmp/partinfo > /dev/null 2>&1
+else
+	dialog --title "ERROR - XBP Partition table not found" --msgbox "\n1. This HD was formatted with UnleashX or EvolutionX.\n   Note: Standard Xbox partitions will be present.\n\n2. If this is a new HD then there is no partition\n   table." 0 0
+	rm -f /tmp/partinfo > /dev/null 2>&1
+fi
+}
+###############################################################################################################
+check_fatx_eeprom() {
+mkdir -p /tmp/E
+mount -r -t fatx /dev/hda50 /tmp/E
+[ -f "/tmp/E/eeprom.bin" ] && cp -f "/tmp/E/eeprom.bin" "/tmp/E:\eeprom.bin"
+#dialog --msgbox "  Found E:\eeprom.bin" 5 30 
+}
+###############################################################################################################
+network_settings_menu() {
+	local IP=`ifconfig eth0 | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1`
+	if dialog --defaultno --yesno "Current IP Address: $IP\nDo you wish to reconfigure?" 0 0; then
+			/usr/bin/netcardconfig
+			network_settings_menu
+	fi
+}
+###############################################################################################################
+lock_unlock_hda_menu() {
+local lock_unlock_hda_menu=1
+dialog --nocancel --title "Master HD locking options" --menu "Where is the key source " 0 0 0 \
+	1 "From Motherboard" \
+	2 "From /tmp/eeprom.bin" \
+	3 "From Xbox HD E:\eeprom.bin" \
+	4 "From Master password:XBOXSCENE" \
+	5 "From Master password:TEAMASSEMBLY" \
+	6 "From /tmp/hddkey.txt" \
+	7 "Go back" \
+2> /tmp/lock_unlock_hda_menu
+lock_unlock_hda_menu=`cat /tmp/lock_unlock_hda_menu`
+case $lock_unlock_hda_menu in
+	1)	
+		key_src="" ;;
+	2)	
+		key_src=/tmp/eeprom.bin ;;
+	3)	
+		eval "check_fatx_eeprom" ;
+		key_src="E:\eeprom.bin" ;
+		umount /tmp/E ;;
+	4)	
+		key_src=XBOXSCENE ;;
+	5)	
+		key_src=TEAMASSEMBLY ;;
+	6)	
+		key_src=/tmp/hddkey.txt ;;
+	7)	
+		slave_hd_menu ;;
+esac
+}
+###############################################################################################################
+lock_unlock_hdb_menu() {
+local lock_unlock_hdb_menu=1
+dialog --nocancel --title "Slave HD locking options" --menu "Where is the key source " 0 0 0 \
+	1 "From Motherboard" \
+	2 "From /tmp/eeprom.bin" \
+	3 "From Xbox HD E:\eeprom.bin" \
+	4 "From Master password:XBOXSCENE" \
+	5 "From Master password:TEAMASSEMBLY" \
+	6 "From /tmp/hddkey.txt" \
+	7 "Go back" \
+2> /tmp/lock_unlock_hdb_menu
+lock_unlock_hdb_menu=`cat /tmp/lock_unlock_hdb_menu`
+case $lock_unlock_hdb_menu in
+	1)	
+		key_src="" ;;
+	2)	
+		key_src=/tmp/eeprom.bin ;;
+	3)	
+		eval "check_fatx_eeprom" ;
+		key_src="E:\eeprom.bin" ;
+		umount /tmp/E ;;
+	4)	
+		key_src=XBOXSCENE ;;
+	5)	
+		key_src=TEAMASSEMBLY ;;
+	6)	
+		key_src=/tmp/hddkey.txt ;;
+	7)	
+		slave_hd_menu ;;
+esac
+}
+###############################################################################################################
+slave_hd_menu() {
+local slave_hd_menu=1
+dialog --nocancel --title "Slave drive options" --menu "Choose option\nHD is $lockhdb" 0 0 0 \
+	1 "Lock drive" \
+	2 "Unlock drive" \
+	3 "Partition information" \
+	4 "Format extended partitions" \
+	5 "Go back" \
+2> /tmp/slave_hd_menu
+slave_hd_menu=`cat /tmp/slave_hd_menu`
+case $slave_hd_menu in
+	1)	
+		lock_unlock_hdb_menu ;
+		/usr/bin/lockhdb lock "$key_src" ;
+		eval "slave_lock_status" ;
+		main_menu ;;
+	2)	
+		lock_unlock_hdb_menu ;
+		/usr/bin/lockhdb unlock "$key_src" ;
+		/usr/bin/lockhdb disable-pw "$key_src" ;
+		eval "slave_lock_status";
+		main_menu ;;
+	3)	
+		eval "slave_partition_status" ;
+		slave_hd_menu ;;
+	4)	
+		/usr/bin/lpartitionerhdb;
+		slave_hd_menu ;;
+	5)	
+		main_menu ;;
+esac
+}
+###############################################################################################################
+master_hd_menu() {
+if [ "$Advanced_Feature_Enabled" == "True" ] ; then
+	local master_hd_menu=1
+	dialog --nocancel --title "Master drive options" --menu "Choose option\nHD is $lockhda" 0 0 0 \
+		1 "Lock drive" \
+		2 "Unlock drive" \
+		3 "Partition information" \
+		4 "Format extended partitions" \
+		5 "Go back" \
+		2> /tmp/master_hd_menu
+	master_hd_menu=`cat /tmp/master_hd_menu`
+	case $master_hd_menu in
+		1)	
+			lock_unlock_hda_menu ;
+			/usr/bin/lockhda lock "$key_src" ;
+			eval "master_lock_status" ;
+			main_menu ;;
+		2)	
+			lock_unlock_hda_menu ;
+			/usr/bin/lockhda unlock "$key_src" ;
+			/usr/bin/lockhda disable-pw "$key_src" ;
+			eval "master_lock_status" ;
+			main_menu ;;
+		3)	
+			eval "master_partition_status" ;
+			master_hd_menu ;;
+		4)	
+			/usr/bin/lpartitionerhda;
+			master_hd_menu ;;
+		5)	
+			main_menu ;;
+esac
+else
+	local master_hd_menu=1
+	dialog --nocancel --title "Master drive options" --menu "Choose option\nHD is $lockhda" 0 0 0 \
+		1 "Partition information" \
+		2 "Format extended partitions" \
+		3 "Go back" \
+		2> /tmp/master_hd_menu
+	master_hd_menu=`cat /tmp/master_hd_menu`
+	case $master_hd_menu in
+		1)	
+			eval "master_partition_status" ;
+			master_hd_menu ;;
+		2)	
+			/usr/bin/lpartitionerhda;
+			master_hd_menu ;;
+		3)	
+			main_menu ;;
+esac
+fi
+}
+###############################################################################################################
+DMA_hd_menu() {
+local DMA_hd_menu=1
+dialog --nocancel --title "Direct Memory Access options" --menu "Choose option" 0 0 0 \
+	1 "Enable DMA - Master HD" \
+	2 "Enable DMA - Slave HD" \
+	3 "Enable DMA on both drives" \
+	4 "Disable DMA - Master HD" \
+	5 "Disable DMA - Slave HD" \
+	6 "Disable DMA on both drives" \
+	7 "Go back" \
+2> /tmp/DMA_hd_menu
+DMA_hd_menu=`cat /tmp/DMA_hd_menu`
+case $DMA_hd_menu in
+	1)	
+		dialog --title "Direct Memory Access Enabled" --msgbox "/dev/hda: Master HD" 0 0
+		/sbin/hdparm -d1 /dev/hda > /dev/null 2>&1 ;
+		DMA_hd_menu ;;
+	2)	
+		dialog --title "Direct Memory Access Enabled" --msgbox "/dev/hdb: Slave HD" 0 0
+		/sbin/hdparm -d1 /dev/hdb > /dev/null 2>&1 ;
+		DMA_hd_menu ;;
+	3)	
+		dialog --title "Direct Memory Access Enabled" --msgbox "/dev/hda: Master HD\n/dev/hdb: Slave HD" 0 0
+		/sbin/hdparm -d1 /dev/hda > /dev/null 2>&1 ;
+		/sbin/hdparm -d1 /dev/hdb > /dev/null 2>&1 ;
+		DMA_hd_menu ;;
+	4)	
+		dialog --title "Direct Memory Access Disabled" --msgbox "/dev/hda: Master HD" 0 0
+		/sbin/hdparm -d0 /dev/hda > /dev/null 2>&1 ;
+		DMA_hd_menu ;;
+	5)	
+		dialog --title "Direct Memory Access Disabled" --msgbox "/dev/hdb: Slave HD" 0 0
+		/sbin/hdparm -d0 /dev/hdb > /dev/null 2>&1 ;
+		DMA_hd_menu ;;
+	6)	
+		dialog --title "Direct Memory Access Disabled" --msgbox "/dev/hda: Master HD\n/dev/hdb: Slave HD" 0 0
+		/sbin/hdparm -d0 /dev/hda > /dev/null 2>&1 ;
+		/sbin/hdparm -d0 /dev/hdb > /dev/null 2>&1 ;
+		DMA_hd_menu ;;
+	7)	
+		settings_menu ;;
+esac
+}
+###############################################################################################################
+settings_menu() {
+local settings_menu=1
+dialog --nocancel --title "Other options" --menu "Choose option" 0 0 0 \
+	1 "Network Settings" \
+	2 "Backup EEPROM" \
+	3 "DMA Settings" \
+	4 "Enable Advanced Features" \
+	5 "Reboot" \
+	6 "Shutdown" \
+	7 "Linux shell" \
+	8 "Go back" \
+	0 "Change Log" \
+2> /tmp/settings_menu
+settings_menu=`cat /tmp/settings_menu`
+case $settings_menu in
+	1)	
+		network_settings_menu
+		settings_menu ;;
+	2)	
+		/usr/sbin/xbox-info -r /tmp/eeprom.bin
+		dialog --msgbox "  Eeprom backup saved to /tmp/eeprom.bin" 5 47 ;
+		settings_menu ;;
+	3)	
+		DMA_hd_menu ;;
+	4)	
+		dialog --defaultno --title "Enable Advanced Features?" --yesno "\nThis will enable:\nLocking & Unlocking of the Master HD." 8 43 ;
+		test $? -eq 0 && Advanced_Feature_Enabled="True" && main_menu ;
+		Advanced_Feature_Enabled=""
+		main_menu ;;
+	5)	
+		dialog --title "Question Time!" --yesno "Would you like to reboot the Xbox?" 5 40 ;
+		test $? -eq 0 && reboot ;
+		settings_menu ;;
+	6)	
+		dialog --title "Question Time!" --yesno "Would you like to shutdown the Xbox?" 5 40 ;
+		test $? -eq 0 && shutdown ;
+		settings_menu ;;
+	7)	
+		dialog --inputbox "A USB keyboard is required to enter commands. Type \"ok\" to continue" 0 0 2> "$TMP"
+		if [ "$?" = 0 -a "`cat "$TMP"|tr '[A-Z]' '[a-z]'`" = ok ] ; then
+			echo -n -e "\033[?25h"
+			echo -n -e "\033[43;30m]"
+			clear
+			echo -e "\n"
+			echo "Type exit to return to the menu"
+			/bin/sh -i
+			echo -e "\n"
+			echo "Return to the menu"
+			echo -n -e "\033[?25l"
+			sleep 2
+		fi
+		main_menu ;;
+	8)	
+		/usr/bin/chimp ;
+		main_menu ;;
+	0)	
+		dialog --title 'Change log - Chimp 261812' --msgbox "$changelogpage1" 25 65 ;
+		dialog --title 'Change log - Chimp 261812' --msgbox "$changelogpage2" 25 65 ;
+		settings_menu ;;
+esac
+}
+###############################################################################################################
+main_menu() {
+TMP=/tmp/chimp_menu.tmp
+dialog --nocancel --title "ldotsfan/Rocky5 HD tools" --menu "Choose option" 0 0 0 \
+	1 "Scan physical IDE devices" \
+	2 "Clone from master to slave" \
+	3 "Slave drive options" \
+	4 "Master drive options" \
+	5 "Other options" \
+2> /tmp/main_menu
+main_menu=`cat /tmp/main_menu`
+case $main_menu in
+	1)	
+		/usr/bin/scanide;
+		main_menu ;;
+	2)	
+		/usr/bin/cloneab;
+		main_menu ;;
+	3)	
+		eval "slave_lock_status";
+		slave_hd_menu ;;
+	4)	
+		eval "master_lock_status";
+		master_hd_menu ;;
+	5)	
+		settings_menu
+		main_menu ;;
+	*) ;;
+esac
+}
+main_menu
+###############################################################################################################

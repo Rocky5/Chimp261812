@@ -1,0 +1,70 @@
+#!/bin/sh
+
+cd /tmp/
+Colour='echo -n -e \033[44;37m'
+REALOP="$1"
+TARGET=/dev/hdb
+PASSWORD_OPT=" -a "
+PASSWORD_SRC="Motherboard"
+
+if [ -z "$1" ]; then
+echo "usage: $0 <lock/unlock/disable-pw>"
+exit 1
+fi
+
+if [ "$2" != "" ]; then
+pass=$(echo $2 | grep hdpass.txt)
+eeprom=$(echo $2 | grep eeprom.bin)
+hddkey=$(echo $2 | grep hddkey.txt)
+if [ -e "$2" ]; then
+if [ "$eeprom" != "" ]; then 
+PASSWORD_OPT="-e $2"
+PASSWORD_SRC="$2"
+elif [ "$pass" != "" ]; then
+pass=$(cat $2)
+if [ $pass -eq "TEAMASSEMBLY" ]; then
+pass="5445414D414353454D424C59"
+elif [ $pass -eq "XBOXSCENE" ]; then
+pass="58424F585343454E4500"
+fi
+[ -z "$pass" ] && echo "$2 empty" && exit 1
+PASSWORD_OPT="-p $pass"
+else
+hddkey=$(cat $2)
+[ -z "$hddkey" ] && echo "$2 empty" && exit 1
+PASSWORD_OPT="-k $hddkey"
+fi
+PASSWORD_SRC="$2"
+fi
+fi
+
+if [ -e $TARGET ]; then
+$Colour
+hdtool2  $PASSWORD_OPT -d $TARGET -o unlock | head -n 11 > /tmp/eeprom_info
+info=$(cat /tmp/eeprom_info)
+if [ "$1" != "unlock" ]; then
+dialog --defaultno --title "Password from $PASSWORD_SRC, choose Yes to $1" --yesno "$info" 0 0
+case $? in
+  0 ) lock="yes";;
+esac
+rm /tmp/eeprom_info > /dev/null 2>&1
+clear
+if  [ "$lock" != "" ]; then
+if  [ "$hddkey" != "" ]; then
+$Colour
+hdtool2 -d $TARGET $PASSWORD_OPT -o disable-pw > /tmp/hdtool2.log
+[ "$1" != "disable-pw" ] && echo "y" | hdtool2 -d $TARGET $PASSWORD_OPT -o $REALOP >> /tmp/hdtool2.log
+else
+$Colour
+hdtool -d $TARGET $PASSWORD_OPT -o disable-pw > /tmp/hdtool.log
+[ "$1" != "disable-pw" ] && echo "y" | hdtool $TARGET $PASSWORD_OPT -o $REALOP >> /tmp/hdtool.log
+fi
+#dialog  --title "Done, Password from $PASSWORD_SRC saved in /tmp/hdtool2.log" --textbox /tmp/hdtool2 15 90
+clear
+fi
+else
+#dialog --title "$1 result - password generated from $PASSWORD_SRC" --msgbox "$info" 0 0
+clear
+fi
+fi
+cd /

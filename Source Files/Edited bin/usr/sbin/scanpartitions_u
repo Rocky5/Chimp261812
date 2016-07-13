@@ -1,0 +1,93 @@
+#!/bin/sh
+# Based on scanpartitions (C) Klaus Knopper Nov 2002
+# Modified for the Xbox by Richard Osborne Jul 2005
+# Reads /proc/partitions, returns table of the form
+# basename(devicefile) mountpoint filesystemtype
+
+[ ! -e /proc/partitions ] && { echo "$0: /proc not mounted, exiting" >&2; exit 1; }
+
+fstype(){
+	[ -n "$1" ] || return 1
+	while read device mountpoint filesystem relax; do
+		case "$device" in *$1*) echo "$filesystem"; return 0;; esac
+	done <<EOT
+$(cat /proc/mounts)
+EOT
+	dd if="$1" count=1 bs=1024 >/dev/null 2>&1 || return 2
+	TMPDIR="/tmp/autmount.${1##*/}.$$.dir"
+	mkdir -p "$TMPDIR" || return 3
+	FS=""
+	read LOGLEVEL relax < /proc/sys/kernel/printk
+	echo "0" >/proc/sys/kernel/printk
+	while read f; do
+		mount -r -t "$f" "$1" "$TMPDIR" >/dev/null 2>&1 && { umount "$TMPDIR"; FS="$f"; break; }
+		umount -f "$TMPDIR" >/dev/null 2>&1	
+	done<<EOT
+$(cat /proc/filesystems | grep -v nodev)
+EOT
+	echo "$LOGLEVEL" >/proc/sys/kernel/printk
+	rmdir "$TMPDIR"
+	[ -n "$FS" ] && echo "$FS" || return 4
+}
+
+mountpoint(){
+	[ -n "$1" ] || return 1
+
+	while read device mountpoint filesystem relax; do
+		case "$device" in *$1*) echo "$mountpoint"; return 0;; esac
+	done <<EOT
+$(cat /proc/mounts)
+EOT
+	return 4
+}
+
+pname() {
+	[ -n "$1" ] || return 1
+	case "${1##*/}" in
+		hda50) echo "E"; return 0; ;;
+		hda51) echo "C"; return 0; ;;
+		hda52) echo "X"; return 0; ;;
+		hda53) echo "Y"; return 0; ;;
+		hda54) echo "Z"; return 0; ;;
+		hda55) echo "F"; return 0; ;;
+		hda56) echo "G"; return 0; ;;
+		*) echo "${1##*/}"; return 0; ;;
+	esac
+	return 1
+}
+
+if [ -z "$1" ]; then
+	partitions=""
+	disks=""
+	while read major minor blocks partition relax; do
+		partition="${partition##*/}"
+		[ -z "$partition" -o ! -e "/dev/$partition" ] && continue
+		[ "$blocks" -lt 2 ] && continue
+		case "$partition" in
+			[hs]d?) disks="$disks $partition";;
+			*) partitions="$partitions /dev/$partition";;
+		esac
+	done <<EOT
+$(awk 'BEGIN{old="__start"}{if($0==old){exit}else{old=$0;if($4&&$4!="name"){print $0}}}' /proc/partitions)
+EOT
+	for d in $disks; do
+		case "$partitions" in */dev/$d*) continue;; esac
+		partitions="$partitions /dev/$d"
+	done
+else
+	partitions="$*"
+fi
+
+for p in $partitions; do
+	fs="auto"
+	scanfs="$(fstype $p)"
+	[ -n "$scanfs" ] && fs="$scanfs"
+	mountpoint="/mnt/$(pname $p)"
+	scanmountpoint="$(mountpoint $p)"
+	[ -n "$scanmountpoint" ] && mountpoint="$scanmountpoint"
+	[ "$fs" = "swap" ] && mountpoint="none"
+	echo "${p}" "${mountpoint}" "${fs}"
+	umount "${mountpoint}"
+done
+
+exit 0
