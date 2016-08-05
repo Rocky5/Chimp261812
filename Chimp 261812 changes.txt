@@ -1,3 +1,10 @@
+Small update - 05/08/2016:
+
+Added a new option to the Slave drive options.
+Fix Error 16, this will clone your working C partition from your master drive.
+(it only clones the C partition, all other partitions & partition table if present stay intact)
+
+
 Chimp 261812 Changes
 
 

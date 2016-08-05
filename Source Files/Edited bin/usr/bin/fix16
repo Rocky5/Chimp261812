@@ -1,0 +1,89 @@
+#!/bin/sh
+
+Colour='echo -n -e \033[44;37m'
+FatX_BS=512
+
+gcd ()
+{
+  dividend=$1
+  divisor=$2
+  remainder=1
+  until [ "$remainder" -eq 0 ]
+  do
+	let "remainder = $dividend % $divisor"
+	dividend=$divisor
+	divisor=$remainder
+  done                    # Euclid's algorithm
+}                         # Last $dividend is the gcd.
+
+/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
+lockhdb=$(cat /tmp/hdlock)
+if [ -n "$lockhdb" ]; then
+	slave_lock_status="locked"
+	rm -f /tmp/hdlock > /dev/null 2>&1
+fi
+
+progress_dd () {
+local s=$1
+local t=$2
+
+/usr/bin/pv -w 75 $s | dd of=$t $BS_Size $Seek $Count
+clear
+return 0
+}
+
+clone_parts() {
+$Colour
+clear
+sleep 1
+hdparm -z $TARGET > /dev/null 2>&1
+$Colour
+for i in $1; do
+case $i in
+	*C*) 	clear ;
+			dd if=dev/XboxParTable bs=512 count=1 2> /dev/null | hexdump | grep "0000 8000" | awk '{ if (NR == 2) print $5 $4" "$7 $6; }' | while read POFFSET PSIZE ;
+			do clear ;
+			#######################################################
+			Partition_Offset=$((0x$POFFSET))
+			Partition_Size=$((0x$PSIZE))
+			gcd $Partition_Offset $Partition_Size
+			let "BS=$dividend"
+			#######################################################
+			echo -e "\n" ;
+			echo -e " Cloning Status: Cloning C Partition.";
+#disabled	echo -e "\n Byte Size = $(($FatX_BS*$BS))\n Partition Information:\n Offset: $POFFSET\n Size: $PSIZE\n" ;
+			dd if=${SRC}51 bs=$(($FatX_BS*$BS)) count=$(($Partition_Size/$BS)) 2>/dev/null | pv -w 75 -s $(($FatX_BS*$Partition_Size)) | dd of=$TARGET bs=$(($FatX_BS*$BS)) seek=$(($Partition_Offset/$BS)) 2>/dev/null
+			done || return 1 ;;
+			#######################################################
+esac
+done
+clear
+dialog --infobox "Cloning complete.\nError 16 should be fixed now." 0 0 ;
+sleep 5
+return
+}
+
+#starts here
+if [ "$slave_lock_status" == "locked" ] ; then
+	dialog --infobox "Slave HD is locked.\nPlease unlock the HD first." 0 0
+	sleep 3
+	return
+fi
+
+if [ -e /dev/hda ]; then
+	SRC=/dev/hda
+else
+	SRC=/dev/zero
+	DD_OPTION="count=100000"
+fi
+
+if [ -e /dev/hdb ]; then
+	TARGET=/dev/hdb
+else
+	TARGET=/dev/null
+fi
+clone_parts "C"
+fi
+fi
+fi
+clear

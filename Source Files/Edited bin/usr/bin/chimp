@@ -182,7 +182,8 @@ dialog --nocancel --title "Slave drive options" --menu "Choose option\nHD is $lo
 	2 "Unlock drive" \
 	3 "Partition information" \
 	4 "Format extended partitions" \
-	5 "Go back" \
+	5 "Fix Error 16" \
+	6 "Go back" \
 2> /tmp/slave_hd_menu
 slave_hd_menu=`cat /tmp/slave_hd_menu`
 case $slave_hd_menu in
@@ -203,7 +204,10 @@ case $slave_hd_menu in
 	4)	
 		/usr/bin/lpartitionerhdb;
 		slave_hd_menu ;;
-	5)	
+	5)	dialog --title "Question Time!" --defaultno --yesno "This will overwrite your C partition.\nDo you want to proceed?" 6 45 ;
+		test $? -eq 0 && /usr/bin/fix16;
+		slave_hd_menu ;;
+	6)	
 		main_menu ;;
 esac
 }
