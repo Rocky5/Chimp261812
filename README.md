@@ -12,11 +12,14 @@ Small update - 25/11/2016:
 Added my modified version of Gentoox loader that auto boot chimp and boot from 6 locations on the E partition.
 ( note: E partition is mandatory )
 
-E:\applications\chimp
-E:\applications\chimp loader
-E:\apps\chimp
-E:\apps\chimp loader
-E:\chimp
-E:\chimp loader
+
+
+	E:\applications\chimp
+	E:\applications\chimp loader
+	E:\apps\chimp
+	E:\apps\chimp loader
+	E:\chimp
+	E:\chimp loader
+
 
 Also changed the wording of the Fix error 16 dialogue.
