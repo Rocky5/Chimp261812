@@ -204,7 +204,7 @@ case $slave_hd_menu in
 	4)	
 		/usr/bin/lpartitionerhdb;
 		slave_hd_menu ;;
-	5)	dialog --title "Question Time!" --defaultno --yesno "This will overwrite your C partition.\nDo you want to proceed?" 6 45 ;
+	5)	dialog --title "Question Time!" --defaultno --yesno "Slave drives C partition will be overwritten.\nDo you want to proceed?" 6 50 ;
 		test $? -eq 0 && /usr/bin/fix16;
 		slave_hd_menu ;;
 	6)	

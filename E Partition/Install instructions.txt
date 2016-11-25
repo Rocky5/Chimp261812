@@ -1,0 +1,11 @@
+
+This version of chimp can be installed to one of the 6 locations listed bellow.
+
+Note: by default I use the Chimp folder name.
+
+E:\applications\chimp
+E:\applications\chimp loader
+E:\apps\chimp
+E:\apps\chimp loader
+E:\chimp
+E:\chimp loader

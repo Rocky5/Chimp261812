@@ -56,4 +56,6 @@ Chimp 261812 Changes
 
 20. Shutdown & Restart confirm dialogues.
 
-21. Probably more changes, but lost track. :/
+21. New gentoox loader that auto boots chimp.
+
+22. Probably more changes, but lost track. :/
