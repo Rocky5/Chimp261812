@@ -1,6 +1,16 @@
 #!/bin/sh
 #Disable the bloody cursor, used when exiting shell script, as I enable the cursor for that.
 echo -n -e "\033[?25l"
+/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
+lockhdb=$(cat /tmp/hdlock)
+if [ "$lockhdb" == "Security level : high" ]; then
+	rm -f /tmp/hdlock > /dev/null 2>&1
+else
+	dialog --infobox "Slave Hard drive cannot be locked." 3 38 ;
+	sleep 5
+	Disable_Cloning_Features="True"
+	rm -f /tmp/hdlock > /dev/null 2>&1
+fi
 
 ###############################################################################################################
 changelogpage1="
@@ -35,6 +45,18 @@ changelogpage2="
 \n21. Probably more changes, but lost track. :/
 "
 ###############################################################################################################
+slave_lockable() {
+/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
+lockhdb=$(cat /tmp/hdlock)
+if [ "$lockhdb" == "Security level : high" ]; then
+	rm -f /tmp/hdlock > /dev/null 2>&1
+else
+	dialog --infobox "Slave Hard drive cannot be locked." 3 38 ;
+	sleep 5
+	Disable_Cloning_Features="True"
+	rm -f /tmp/hdlock > /dev/null 2>&1
+fi
+}
 slave_lock_status() {
 #/sbin/hdparm -I /dev/hdb | grep "Security level high" > /tmp/hdlock
 /usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
@@ -337,7 +359,7 @@ case $settings_menu in
 		dialog --defaultno --title "Enable Advanced Features?" --yesno "\nThis will enable:\nLocking & Unlocking of the Master HD." 8 43 ;
 		test $? -eq 0 && Advanced_Feature_Enabled="True" && main_menu ;
 		Advanced_Feature_Enabled=""
-		main_menu ;;
+		settings_menu ;;
 	5)	
 		dialog --title "Question Time!" --yesno "Would you like to reboot the Xbox?" 5 40 ;
 		test $? -eq 0 && reboot ;
@@ -362,7 +384,6 @@ case $settings_menu in
 		fi
 		main_menu ;;
 	8)	
-		/usr/bin/chimp ;
 		main_menu ;;
 	0)	
 		dialog --title 'Change log - Chimp 261812' --msgbox "$changelogpage1" 25 65 ;
@@ -370,35 +391,58 @@ case $settings_menu in
 		settings_menu ;;
 esac
 }
+
 ###############################################################################################################
 main_menu() {
 TMP=/tmp/chimp_menu.tmp
-dialog --nocancel --title "ldotsfan/Rocky5 HD tools" --menu "Choose option" 0 0 0 \
-	1 "Scan physical IDE devices" \
-	2 "Clone from master to slave" \
-	3 "Slave drive options" \
-	4 "Master drive options" \
-	5 "Other options" \
-2> /tmp/main_menu
-main_menu=`cat /tmp/main_menu`
-case $main_menu in
-	1)	
-		/usr/bin/scanide;
-		main_menu ;;
-	2)	
-		/usr/bin/cloneab;
-		main_menu ;;
-	3)	
-		eval "slave_lock_status";
-		slave_hd_menu ;;
-	4)	
-		eval "master_lock_status";
-		master_hd_menu ;;
-	5)	
-		settings_menu
-		main_menu ;;
-	*) ;;
-esac
+if [ "$Disable_Cloning_Features" == "True" ] ; then
+	dialog --nocancel --title "ldotsfan/Rocky5 HD tools" --menu "Choose option" 0 0 0 \
+		1 "Scan physical IDE devices" \
+		2 "Master drive options" \
+		3 "Other options" \
+	2> /tmp/main_menu
+	main_menu=`cat /tmp/main_menu`
+	case $main_menu in
+		1)	
+			/usr/bin/scanide ;
+			main_menu ;;
+		2)	
+			eval "master_lock_status" ;
+			master_hd_menu ;;
+		3)	
+			settings_menu ;
+			main_menu ;;
+		*) ;;
+	esac
+else
+	dialog --nocancel --title "ldotsfan/Rocky5 HD tools" --menu "Choose option" 0 0 0 \
+		1 "Scan physical IDE devices" \
+		2 "Clone from master to slave" \
+		3 "Slave drive options" \
+		4 "Master drive options" \
+		5 "Other options" \
+	2> /tmp/main_menu
+	main_menu=`cat /tmp/main_menu`
+	case $main_menu in
+		1)	
+			/usr/bin/scanide ;
+			main_menu ;;
+		2)	
+			/usr/bin/cloneab ;
+			main_menu ;;
+		3)	
+			eval "slave_lock_status" ;
+			slave_hd_menu ;;
+		4)	
+			eval "master_lock_status" ;
+			master_hd_menu ;;
+		5)	
+			settings_menu ;
+			main_menu ;;
+		*) ;;
+	esac
+
+fi
 }
 main_menu
 ###############################################################################################################
