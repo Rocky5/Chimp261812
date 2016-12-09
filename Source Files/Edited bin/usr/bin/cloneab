@@ -239,13 +239,15 @@ dialog --infobox "Please wait..." 3 20 ;
 echo "y" | hdtool2 -a -d $TARGET -o LOCK > /tmp/hdtool2.log
 Check_Lock_Status=`grep "Command completed successfully" /tmp/hdtool2.log`
 if [ -n "$Check_Lock_Status" ]; then
-	dialog --infobox "Slave Hard drive locked successfully." 3 41 ;
+	dialog --title 'Locking Status' --msgbox  "Slave Hard drive locked successfully." 5 43 ;
+	#dialog --infobox "Slave Hard drive locked successfully." 3 41 ;
+	#sleep 5
 	rm -f /tmp/hdtool2.log > /dev/null 2>&1
-	sleep 3
 else
-	dialog --infobox "Slave Hard drive locked failed." 3 35 ;
+	dialog --title 'Locking Status' --msgbox  "Slave Hard drive locked failed." 5 37 ;
+	#dialog --infobox "Slave Hard drive locked failed." 3 35 ;
+	#sleep 5
 	rm -f /tmp/hdtool2.log > /dev/null 2>&1
-	sleep 3
 fi
 return;
 }

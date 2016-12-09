@@ -7,6 +7,13 @@ How to clone your Hard drive using Chimp 261812 from start to finish.
 https://www.youtube.com/watch?v=lBC9599ww6I
 
 
+Another small update - 09/12/2016:
+
+Slight change to the locking dialogue after a successful clone.
+Added a slave drive lock check when the menu loads, and I also disable options if the drive cannot be locked.
+( This should help people when faced with a non lockable HDD, saves cloning to find out :D )
+
+	
 Another small update - 28/11/2016:
 
 Moved to psyko_chewbacca version of GentooxLoader, he had updated the loader and recommended using it as his can also be compiled on modern linux systems.
