@@ -395,7 +395,7 @@ else
 fi
 ###############################################################################################################
 if test -f "/tmp/softmodmode" ; then 
-	dialog --title 'Slave Drive Alert' --msgbox "Error: HDTool failed to lock the HDD.\n\nSlave device cannot be locked. Some menu items are disabled." 0 0 ;
+	if [ "$Disable_Cloning_Features" == "True" ] ; then dialog --title 'Slave Drive Alert' --msgbox "Error: HDTool failed to lock the HDD.\n\nSlave device cannot be locked. Some menu items are disabled." 0 0 ; fi
 	main_menu() {
 	local main_menu=1
 	if [ "$Disable_Cloning_Features" == "True" ] ; then
@@ -483,4 +483,5 @@ if test -f "/tmp/hardmodmode" ; then
 	main_menu
 fi
 ###############################################################################################################
+
 
