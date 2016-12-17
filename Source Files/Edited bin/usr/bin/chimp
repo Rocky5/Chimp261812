@@ -1,6 +1,9 @@
 #!/bin/sh
 #Disable the bloody cursor, used when exiting shell script, as I enable the cursor for that.
 echo -n -e "\033[?25l"
+###############################################################################################################
+Disclaimer="\nI take no responsibility for what you do from now on.\n\nI have setup this program for certain mod types, if you choose to use one that is not designed for your modded system and you damage it, that falls upon yourself.\n\nIf you are Softmodded 'DO NOT UNLOCK YOUR MASTER HDD!'\nNever UNLOCK the MASTER Hard Drive on a SOFTMODDED system. NEVER!"
+###############################################################################################################
 /usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
 lockhdb=$(cat /tmp/hdlock)
 if [ -n "$lockhdb" ]; then
@@ -19,46 +22,10 @@ else
 		echo "y" | hdtool2 -a -d /dev/hdb -o disable-pw > /tmp/hdtool2.log
 		rm -f /tmp/hdtool2.log > /dev/null 2>&1
 	else
-		dialog --infobox "Slave Hard drive cannot be locked." 3 38 ;
 		Disable_Cloning_Features="True"
-		sleep 5
 		rm -f /tmp/hdtool2.log > /dev/null 2>&1
 	fi
 fi
-
-
-###############################################################################################################
-changelogpage1="
-\n1. Redone the menus.
-\n2. Added lock master HDD.
-\n(not sure why its not there by default)
-\n3. Added format extra partitions for slave drive.
-\n4. Changed buffer size back to 512kb, as anything above this value will result in error 13.
-\n5. Removed -d from hdtool in lockhda & lockhdb as hdtool doesn't use -d.
-\n6. Fixed the Pipe Viewer (Progress bar you see when cloning a HDD) fits the screen better.
-\n7. Also padded the top of the screen for the above & the no progress variant.
-\n(was required to compensate for overscan)
-\n8. Changed the menu system in lpartitionerhda & lpartitionerhdb, stops the error about line 106.
-\n9. Changed how the IDE information is gathered.\n(its a lot cleaner looking)
-\n10. Moved the formating of the slave hd untill after the user chooses the options.
-\n(saves on time for me testing things & means the user can exit before formating the slave drive)"
-changelogpage2="
-\n11. Removed the bloody flashing cursor!
-\n12. Option to lock the slave hd after the cloning procedure is complete.
-\n13. Changed the shell background colour for Linux shell & for all other instances.
-\n14. Fixed the scanpartitions shell script, now mounts the drives and added a umount version.
-\n(note this isnt used, but I just fixed it anyways.)
-\n15. Added support for E:\eeprom.bin on the xbox fatx partition.
-\n(ie, before you launch chimp & its case sensitive.)
-\n16. Advanced settings, for the Master HD.
-\n(Enable in settings)
-\n17. Added a more informative error screen for no partition table found.
-\n18. Updated cloning to dynamically get the byte size.
-\n(faster cloning depending on the partition size)
-\n19. New cloning options.
-\n20. Shutdown & Restart confirm dialogues.
-\n21. Probably more changes, but lost track. :/
-"
 ###############################################################################################################
 slave_lock_status() {
 #/sbin/hdparm -I /dev/hdb | grep "Security level high" > /tmp/hdlock
@@ -340,12 +307,10 @@ dialog --nocancel --title "Other options" --menu "Choose option" 0 0 0 \
 	1 "Network Settings" \
 	2 "Backup EEPROM" \
 	3 "DMA Settings" \
-	4 "Enable Advanced Features" \
+	4 "Advanced Features" \
 	5 "Reboot" \
 	6 "Shutdown" \
-	7 "Linux shell" \
-	8 "Go back" \
-	0 "Change Log" \
+	7 "Go back" \
 2> /tmp/settings_menu
 settings_menu=`cat /tmp/settings_menu`
 case $settings_menu in
@@ -359,9 +324,13 @@ case $settings_menu in
 	3)	
 		DMA_hd_menu ;;
 	4)	
-		dialog --defaultno --title "Enable Advanced Features?" --yesno "\nThis will enable:\nLocking & Unlocking of the Master HD." 8 43 ;
-		test $? -eq 0 && Advanced_Feature_Enabled="True" && main_menu ;
-		Advanced_Feature_Enabled=""
+		if test -f "/tmp/softmodmode" ; then 
+			dialog --title 'Nup, dont think so!' --msgbox "This is disabled, since you picked Softmodded Xbox." 6 40 ;
+		else
+			dialog --defaultno --title "Enable Advanced Features?" --yesno "\nThis will enable:\nLocking & Unlocking of the Master HD." 8 43 ;
+			test $? -eq 0 && dialog --defaultno --title "Are you sure??" --yesno "\nMake sure you want this option enabled." 8 43 && test $? -eq 0 && Advanced_Feature_Enabled="True" && main_menu ;
+			test $? -eq 1 && Advanced_Feature_Enabled="" && settings_menu ;
+		fi
 		settings_menu ;;
 	5)	
 		dialog --title "Question Time!" --yesno "Would you like to reboot the Xbox?" 5 40 ;
@@ -372,53 +341,119 @@ case $settings_menu in
 		test $? -eq 0 && shutdown ;
 		settings_menu ;;
 	7)	
-		dialog --inputbox "A USB keyboard is required to enter commands. Type \"ok\" to continue" 0 0 2> "$TMP"
-		if [ "$?" = 0 -a "`cat "$TMP"|tr '[A-Z]' '[a-z]'`" = ok ] ; then
-			echo -n -e "\033[?25h"
-			echo -n -e "\033[43;30m]"
-			clear
-			echo -e "\n"
-			echo "Type exit to return to the menu"
-			/bin/sh -i
-			echo -e "\n"
-			echo "Return to the menu"
-			echo -n -e "\033[?25l"
-			sleep 2
-		fi
 		main_menu ;;
-	8)	
-		main_menu ;;
-	0)	
-		dialog --title 'Change log - Chimp 261812' --msgbox "$changelogpage1" 25 65 ;
-		dialog --title 'Change log - Chimp 261812' --msgbox "$changelogpage2" 25 65 ;
-		settings_menu ;;
 esac
 }
-
 ###############################################################################################################
-main_menu() {
-TMP=/tmp/chimp_menu.tmp
-if [ "$Disable_Cloning_Features" == "True" ] ; then
-	dialog --nocancel --title "ldotsfan/Rocky5 HD tools" --menu "Choose option" 0 0 0 \
-		1 "Scan physical IDE devices" \
-		2 "Master drive options" \
-		3 "Other options" \
-	2> /tmp/main_menu
-	main_menu=`cat /tmp/main_menu`
-	case $main_menu in
-		1)	
-			/usr/bin/scanide ;
-			main_menu ;;
-		2)	
-			eval "master_lock_status" ;
-			master_hd_menu ;;
-		3)	
-			settings_menu ;
-			main_menu ;;
-		*) ;;
-	esac
+if test -f "/tmp/softmodmode" ; then
+	main_menu ;
 else
-	dialog --nocancel --title "ldotsfan/Rocky5 HD tools" --menu "Choose option" 0 0 0 \
+	if test -f "/tmp/hardmodmode" ; then
+		main_menu ;
+	else
+		choice_menu() {	
+			local choice_menu=1
+			dialog --nocancel --title "ldotsfan/Rocky5 HD tools" --menu "Choose option" 0 0 0 \
+				1 "Disclaimer" \
+				2 "Softmodded Xbox" \
+				3 "TSOP/Chipped Xbox" \
+				4 "Linux shell" \
+			2> /tmp/choice_menu
+			choice_menu=`cat /tmp/choice_menu`
+			case $choice_menu in
+				1)	
+					dialog --title 'Chimp 261812 Disclaimer' --msgbox "$Disclaimer" 15 65 ;
+					choice_menu ;;
+				2)	
+					dialog --defaultno --title "Question Time!" --yesno "You picked the Softmodded Xbox option.\n\nIs this correct?" 8 43 ;
+					test $? -eq 0 && dialog --defaultno --title 'Chimp 261812 Disclaimer' --yesno "$Disclaimer\n\nDo you agree?" 16 65 && test $? -eq 0 && "enabled" 2> /tmp/softmodmode && main_menu ;
+					test $? -eq 1 && choice_menu ;;
+				3)	
+					dialog --defaultno --title "Question Time!" --yesno "You picked the TSOP/Chipped Xbox option.\n\nIs this correct?" 8 45 ;
+					test $? -eq 0 && dialog --defaultno --title 'Chimp 261812 Disclaimer' --yesno "$Disclaimer\n\nDo you agree?" 16 65 && test $? -eq 0 && "enabled" 2> /tmp/hardmodmode && main_menu ;
+					test $? -eq 1 && choice_menu ;;
+				4)	
+					dialog --inputbox "A USB keyboard is required to enter commands. Type \"ok\" to continue" 0 0 2> /tmp/choice_menu
+					if [ "$?" = 0 -a "`cat /tmp/choice_menu|tr '[A-Z]' '[a-z]'`" = ok ] ; then
+						echo -n -e "\033[?25h"
+						echo -n -e "\033[43;30m]"
+						clear
+						echo -e "\n"
+						echo "Type exit to return to the menu"
+						/bin/sh -i
+						echo -e "\n"
+						echo "Return to the menu"
+						echo -n -e "\033[?25l"
+						sleep 2
+					fi
+					choice_menu ;;
+				*) ;;
+			esac
+		}
+		choice_menu
+	fi
+fi
+###############################################################################################################
+if test -f "/tmp/softmodmode" ; then 
+	dialog --title 'Slave Drive Alert' --msgbox "Error: HDTool failed to lock the HDD.\n\nSlave device cannot be locked. Some menu items are disabled." 0 0 ;
+	main_menu() {
+	local main_menu=1
+	if [ "$Disable_Cloning_Features" == "True" ] ; then
+		dialog --nocancel --title "Softmod Mode" --menu "Choose option" 0 0 0 \
+			1 "Scan physical IDE devices" \
+			2 "Master drive options" \
+			3 "Other options" \
+		2> /tmp/main_menu
+		main_menu=`cat /tmp/main_menu`
+		case $main_menu in
+			1)	
+				/usr/bin/scanide ;
+				main_menu ;;
+			2)	
+				eval "master_lock_status" ;
+				master_hd_menu ;;
+			3)	
+				settings_menu ;
+				main_menu ;;
+			*) ;;
+		esac
+	else
+		dialog --nocancel --title "Softmod Mode" --menu "Choose option" 0 0 0 \
+			1 "Scan physical IDE devices" \
+			2 "Clone from master to slave" \
+			3 "Slave drive options" \
+			4 "Master drive options" \
+			5 "Other options" \
+		2> /tmp/main_menu
+		main_menu=`cat /tmp/main_menu`
+		case $main_menu in
+			1)	
+				/usr/bin/scanide ;
+				main_menu ;;
+			2)	
+				/usr/bin/cloneab ;
+				main_menu ;;
+			3)	
+				eval "slave_lock_status" ;
+				slave_hd_menu ;;
+			4)	
+				eval "master_lock_status" ;
+				master_hd_menu ;;
+			5)	
+				settings_menu ;
+				main_menu ;;
+			*) ;;
+		esac
+
+	fi
+	}
+	main_menu
+fi
+###############################################################################################################
+if test -f "/tmp/hardmodmode" ; then 
+	main_menu() {
+	local main_menu=1
+	dialog --nocancel --title "TSOP/Chip Mode" --menu "Choose option" 0 0 0 \
 		1 "Scan physical IDE devices" \
 		2 "Clone from master to slave" \
 		3 "Slave drive options" \
@@ -444,9 +479,8 @@ else
 			main_menu ;;
 		*) ;;
 	esac
-
+	}
+	main_menu
 fi
-}
-main_menu
 ###############################################################################################################
 
