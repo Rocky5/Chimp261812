@@ -1,47 +1,67 @@
 #!/bin/sh 
 
-if [ "$1" != "quiet" ]; then
-
-if [ -b /dev/hda ]; then
-#/sbin/hdparm -I /dev/hda | grep "Security level high" > /tmp/hdlock
-/usr/bin/hdsecinfo /dev/hda | grep "Security level : high" > /tmp/hdlock
-lockhda=$(cat /tmp/hdlock)
-if [ -z "$lockhda" ]; then 
-echo "Unlocked" > /tmp/hdlock
-lockhda=$(cat /tmp/hdlock)
+# hda Master Drive
+/sbin/hdparm -I /dev/hda | grep -o "Security level high" > /tmp/scanhda
+lockhda=$(cat /tmp/scanhda)
+if [ "$lockhda" == "Security level high" ]; then
+	echo "Locked - Security level high" > /tmp/scanhda
+	lockhda=$(cat /tmp/scanhda)
 else
-echo "Locked" > /tmp/hdlock
-lockhda=$(cat /tmp/hdlock)
-fi
-echo -e "(Master Drive) /dev/hda:\n" > /tmp/hdinfo
-/sbin/hdparm -I /dev/hda | grep "Model Number" >> /tmp/hdinfo
-/sbin/hdparm -I /dev/hda | grep "Serial Number" >> /tmp/hdinfo
-echo -e "\nLock Status: $lockhda" >> /tmp/hdinfo
-echo -e "\n" >> /tmp/hdinfo
+	/sbin/hdparm -I /dev/hda | grep "Security level maximum" > /tmp/scanhda
+	lockhda=$(cat /tmp/scanhda)
+	if [ "$lockhda" == "Security level maximum" ]; then
+		echo "Locked - Security level maximum" > /tmp/scanhda
+		lockhda=$(cat /tmp/scanhda)
+	else
+		echo "Unlocked" > /tmp/scanhda
+		lockhda=$(cat /tmp/scanhda)
+	fi
 fi
 
-if [ -b /dev/hdb ]; then
-#/sbin/hdparm -I /dev/hdb | grep "Security level high" > /tmp/hdlock
-/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
-lockhdb=$(cat /tmp/hdlock)
-if [ -z "$lockhdb" ]; then 
-echo "Unlocked" > /tmp/hdlock
-lockhdb=$(cat /tmp/hdlock)
+# hdb Slave Drive
+/sbin/hdparm -I /dev/hdb | grep -o "CD-ROM ATAPI" > /tmp/scanhdb
+iscdrom=$(cat /tmp/scanhdb)
+if [ "$iscdrom" == "CD-ROM ATAPI" ]; then
+	iscdrom="true"
 else
-echo "Locked" > /tmp/hdlock
-lockhdb=$(cat /tmp/hdlock)
-fi
-echo -e "(Slave Drive) /dev/hdb:\n" >> /tmp/hdinfo
-/sbin/hdparm -I /dev/hdb | grep "Model Number" >> /tmp/hdinfo
-/sbin/hdparm -I /dev/hdb | grep "Serial Number" >> /tmp/hdinfo
-echo -e "\nLock Status: $lockhdb" >> /tmp/hdinfo
-echo -e "\n" >> /tmp/hdinfo
+	/sbin/hdparm -I /dev/hdb | grep -o "Security level high" > /tmp/scanhdb
+	lockhdb=$(cat /tmp/scanhdb)
+	if [ "$lockhdb" == "Security level high" ]; then
+		echo "Locked - Security level high" > /tmp/scanhdb
+		lockhdb=$(cat /tmp/scanhdb)
+	else
+		/sbin/hdparm -I /dev/hdb | grep "Security level maximum" > /tmp/scanhdb
+		lockhdb=$(cat /tmp/scanhdb)
+		if [ "$lockhdb" == "Security level maximum" ]; then
+			echo "Locked - Security level maximum" > /tmp/scanhdb
+			lockhdb=$(cat /tmp/scanhdb)
+		else
+			echo "Unlocked" > /tmp/scanhdb
+			lockhdb=$(cat /tmp/scanhdb)
+		fi
+	fi
 fi
 
-if [ -e /tmp/hdinfo ]; then
-out=$(cat /tmp/hdinfo)
-dialog --title "Connected IDE devices" --msgbox "$out" 0 0
-rm /tmp/hdinfo
-rm /tmp/hdlock
+# write information
+echo -e "(Master Drive) /dev/hda:\n" > /tmp/scanoutput
+/sbin/hdparm -I /dev/hda | grep "Model Number" >> /tmp/scanoutput
+/sbin/hdparm -I /dev/hda | grep "Serial Number" >> /tmp/scanoutput
+echo -e "\n	Status: $lockhda \n" >> /tmp/scanoutput
+echo -e "(Slave Drive) /dev/hdb:\n" >> /tmp/scanoutput
+/sbin/hdparm -I /dev/hdb | grep "Model Number" >> /tmp/scanoutput
+if [ "$iscdrom" == "true" ]; then
+	echo -e "\n" >> /tmp/scanoutput
+else
+	/sbin/hdparm -I /dev/hdb | grep "Serial Number" >> /tmp/scanoutput
+	echo -e "\n	Status: $lockhdb" >> /tmp/scanoutput
 fi
+
+# Display information
+if [ -e /tmp/scanoutput ]; then
+	out=$(cat /tmp/scanoutput)
+	rm /tmp/scanhda
+	rm /tmp/scanhdb
+	rm /tmp/scanoutput
+	dialog --title "Connected IDE devices" --msgbox "$out" 0 0
 fi
+

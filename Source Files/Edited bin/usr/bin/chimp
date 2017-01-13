@@ -4,57 +4,74 @@ echo -n -e "\033[?25l"
 ###############################################################################################################
 Disclaimer="\nI take no responsibility for what you do from now on.\n\nI have setup this program for certain mod types, if you choose to use one that is not designed for your modded system and you damage it, that falls upon yourself.\n\nIf you are Softmodded 'DO NOT UNLOCK YOUR MASTER HDD!'\nNever UNLOCK the MASTER Hard Drive on a SOFTMODDED system. NEVER!"
 ###############################################################################################################
-/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
-lockhdb=$(cat /tmp/hdlock)
-if [ -n "$lockhdb" ]; then
-	slave_lock_status="locked"
-	rm -f /tmp/hdlock > /dev/null 2>&1
-fi
-
-if [ "$slave_lock_status" == "locked" ] ; then
-	dialog --infobox "Slave HD is locked.\nPlease unlock the HD first." 0 0
-	sleep 3
-	main_menu
+master_lock_status() {
+# hda Master Drive
+/sbin/hdparm -I /dev/hda | grep -o "Security level high" > /tmp/scanhda
+lockhda=$(cat /tmp/scanhda)
+if [ "$lockhda" == "Security level high" ]; then
+	echo "Locked - Security level high" > /tmp/scanhda
+	lockhda=$(cat /tmp/scanhda)
+	rm -f /tmp/scanhda > /dev/null 2>&1
 else
-	echo "y" | hdtool2 -a -d /dev/hdb -o LOCK > /tmp/hdtool2.log
-	Check_Lock_Status=`grep "Command completed successfully" /tmp/hdtool2.log`
-	if [ "$Check_Lock_Status" == "Command completed successfully" ]; then
+	/sbin/hdparm -I /dev/hda | grep "Security level maximum" > /tmp/scanhda
+	lockhda=$(cat /tmp/scanhda)
+	if [ "$lockhda" == "Security level maximum" ]; then
+		echo "Locked - Security level maximum" > /tmp/scanhda
+		lockhda=$(cat /tmp/scanhda)
+		rm -f /tmp/scanhda > /dev/null 2>&1
+	else
+		echo "Unlocked" > /tmp/scanhda
+		lockhda=$(cat /tmp/scanhda)
+		rm -f /tmp/scanhda > /dev/null 2>&1
+	fi
+fi
+}
+slave_lock_status() {
+# hdb Slave Drive
+/sbin/hdparm -I /dev/hdb | grep -o "Security level high" > /tmp/scanhdb
+lockhdb=$(cat /tmp/scanhdb)
+if [ "$lockhdb" == "Security level high" ]; then
+	echo "Locked - Security level high" > /tmp/scanhdb
+	lockhdb=$(cat /tmp/scanhdb)
+	rm -f /tmp/scanhdb > /dev/null 2>&1
+else
+	/sbin/hdparm -I /dev/hdb | grep "Security level maximum" > /tmp/scanhdb
+	lockhdb=$(cat /tmp/scanhdb)
+	if [ "$lockhdb" == "Security level maximum" ]; then
+		echo "Locked - Security level maximum" > /tmp/scanhdb
+		lockhdb=$(cat /tmp/scanhdb)
+		rm -f /tmp/scanhdb > /dev/null 2>&1
+	else
+		echo "Unlocked" > /tmp/scanhdb
+		lockhdb=$(cat /tmp/scanhdb)
+		rm -f /tmp/scanhdb > /dev/null 2>&1
+	fi
+fi
+}
+###############################################################################################################
+eval "slave_lock_status" ;
+if [ "$lockhdb" == "Unlocked" ] ; then
+	echo "y" | hdtool2 -a -d /dev/hdb -o lock > /tmp/hdtool2.log
+	Check_Lock_Status1=`grep -o "Command completed successfully" /tmp/hdtool2.log`
+	if [ "$Check_Lock_Status1" == "Command completed successfully" ]; then
 		echo "y" | hdtool2 -a -d /dev/hdb -o disable-pw > /tmp/hdtool2.log
 		rm -f /tmp/hdtool2.log > /dev/null 2>&1
 	else
-		Disable_Cloning_Features="True"
-		rm -f /tmp/hdtool2.log > /dev/null 2>&1
+		hdtool -a -o lock /dev/hdb > /tmp/hdtool2.log
+		Check_Lock_Status2=`grep -o "Command completed successfully" /tmp/hdtool2.log`
+		if [ "$Check_Lock_Status2" == "Command completed successfully" ]; then
+			hdtool -a -o disable-pw /dev/hdb > /tmp/hdtool2.log
+			rm -f /tmp/hdtool2.log > /dev/null 2>&1
+		else
+			Disable_Cloning_Features="True"
+			rm -f /tmp/hdtool2.log > /dev/null 2>&1
+		fi
 	fi
-fi
-###############################################################################################################
-slave_lock_status() {
-#/sbin/hdparm -I /dev/hdb | grep "Security level high" > /tmp/hdlock
-/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
-lockhdb=$(cat /tmp/hdlock)
-if [ -z "$lockhdb" ]; then
-	echo "Unlocked" > /tmp/hdlock
-	lockhdb=$(cat /tmp/hdlock)
-	rm -f /tmp/hdlock > /dev/null 2>&1
 else
-	echo "Locked" > /tmp/hdlock
-	lockhdb=$(cat /tmp/hdlock)
-	rm -f /tmp/hdlock > /dev/null 2>&1
+	dialog --infobox "Slave HD is locked.\nPlease unlock the HD first." 0 0
+	sleep 3
+	main_menu
 fi
-}
-master_lock_status() {
-#/sbin/hdparm -I /dev/hda | grep "Security level high" > /tmp/hdlock
-/usr/bin/hdsecinfo /dev/hda | grep "Security level : high" > /tmp/hdlock
-lockhda=$(cat /tmp/hdlock)
-if [ -z "$lockhda" ]; then
-	echo "Unlocked" > /tmp/hdlock
-	lockhda=$(cat /tmp/hdlock)
-	rm -f /tmp/hdlock > /dev/null 2>&1
-else
-	echo "Locked" > /tmp/hdlock
-	lockhda=$(cat /tmp/hdlock)
-	rm -f /tmp/hdlock > /dev/null 2>&1
-fi
-}
 ###############################################################################################################
 reboot() {
 	dialog --infobox "Restarting Xbox" 3 19 ;
@@ -169,7 +186,7 @@ esac
 ###############################################################################################################
 slave_hd_menu() {
 local slave_hd_menu=1
-dialog --nocancel --title "Slave drive options" --menu "Choose option\nHD is $lockhdb" 0 0 0 \
+dialog --nocancel --title "Slave drive options" --menu "Choose option\n$lockhdb" 0 0 0 \
 	1 "Lock drive" \
 	2 "Unlock drive" \
 	3 "Partition information" \
@@ -207,7 +224,7 @@ esac
 master_hd_menu() {
 if [ "$Advanced_Feature_Enabled" == "True" ] ; then
 	local master_hd_menu=1
-	dialog --nocancel --title "Master drive options" --menu "Choose option\nHD is $lockhda" 0 0 0 \
+	dialog --nocancel --title "Master drive options" --menu "Choose option\n$lockhda" 0 0 0 \
 		1 "Lock drive" \
 		2 "Unlock drive" \
 		3 "Partition information" \
@@ -238,7 +255,7 @@ if [ "$Advanced_Feature_Enabled" == "True" ] ; then
 esac
 else
 	local master_hd_menu=1
-	dialog --nocancel --title "Master drive options" --menu "Choose option\nHD is $lockhda" 0 0 0 \
+	dialog --nocancel --title "Master drive options" --menu "Choose option\n$lockhda" 0 0 0 \
 		1 "Partition information" \
 		2 "Format extended partitions" \
 		3 "Go back" \
@@ -483,5 +500,7 @@ if test -f "/tmp/hardmodmode" ; then
 	main_menu
 fi
 ###############################################################################################################
+
+
 
 
