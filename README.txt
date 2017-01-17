@@ -8,6 +8,16 @@ https://www.youtube.com/watch?v=lBC9599ww6I
 
 
 ==================================================================
+Another small update - 12/01/2017:
+==================================================================
+
+Updated the lock status code, as some drive only support "Security level maximum"
+( if you have a drive like this. It cannot be unlocked using a master password, only the eeprom password. )
+Added in HDTool to try locking the drive if HDTool2 fails. ( shouldn't matter but worth a try )
+Updated the "Scan physical ide devices" section, also now if a CD-Rom is detected it hides some of the info.
+
+
+==================================================================
 Another small update - 17/12/2016:
 ==================================================================
 
