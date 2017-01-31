@@ -1,11 +1,29 @@
+Chimp 261812:
 
-This version of chimp can be installed to one of the 6 locations listed bellow.
+	Info:
+		This version of chimp can be installed to one of the 6 locations listed bellow.
 
-Note: by default I use the Chimp folder name.
+	Note:
+		By default I use the Chimp folder name.
 
-E:\applications\chimp
-E:\applications\chimp loader
-E:\apps\chimp
-E:\apps\chimp loader
-E:\chimp
-E:\chimp loader
+	Paths:
+		E:\applications\chimp
+		E:\applications\chimp loader
+		E:\apps\chimp
+		E:\apps\chimp loader
+		E:\chimp
+		E:\chimp loader
+
+
+
+XBP Table Writer:
+
+	Info:
+		I modified the XBPartitioner v1.3 source code to allows you to write a partition table to the HDD and only that. It has a clean UI and works fine lol.
+
+	Note:
+		You will only need use this, if your Xbox HDD was formatted with UnleashX, EvolutionX or an older versions of Chimp. ( 2618 or lower )
+
+	Use:
+		After installing Chimp 261812, navigate to the Chimp folder and launch the "XBP Table Writer.xbe" inside the "XBP Table Writer" folder.
+		Select the appropriate option and that's it. Now clone your HDD with Chimp 261812 :D
