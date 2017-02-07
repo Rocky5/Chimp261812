@@ -13,7 +13,7 @@ if [ "$lockhda" == "Security level high" ]; then
 	lockhda=$(cat /tmp/scanhda)
 	rm -f /tmp/scanhda > /dev/null 2>&1
 else
-	/sbin/hdparm -I /dev/hda | grep "Security level maximum" > /tmp/scanhda
+	/sbin/hdparm -I /dev/hda | grep -o "Security level maximum" > /tmp/scanhda
 	lockhda=$(cat /tmp/scanhda)
 	if [ "$lockhda" == "Security level maximum" ]; then
 		echo "Locked - Security level maximum" > /tmp/scanhda
@@ -35,7 +35,7 @@ if [ "$lockhdb" == "Security level high" ]; then
 	lockhdb=$(cat /tmp/scanhdb)
 	rm -f /tmp/scanhdb > /dev/null 2>&1
 else
-	/sbin/hdparm -I /dev/hdb | grep "Security level maximum" > /tmp/scanhdb
+	/sbin/hdparm -I /dev/hdb | grep -o "Security level maximum" > /tmp/scanhdb
 	lockhdb=$(cat /tmp/scanhdb)
 	if [ "$lockhdb" == "Security level maximum" ]; then
 		echo "Locked - Security level maximum" > /tmp/scanhdb

@@ -1,0 +1,14 @@
+This application is to be uses only if your master HDD doesn't have a partition table.
+
+
+The purpose of this application is to allow people to clone there F partitions with Chimp 261812, the reason you cant do it normally is because I only allow the use of the Partition table for cloning.
+So you will need to run this app and pick the correct option based on your partition layout.
+
+
+How you know you don't have one:
+
+	1) Your HDD was formatted with UnleashX ( Hexen disc eg... ) EvolutionX or an older version of Chimp. ( 2618 or lower versions )
+
+	2) You have a F partition with around about 125GB max space & a G partition with the rest of the space.
+
+	3) You have a F partition with all space. ( note this could also mean you have a partition table, but its safe to update it via the app )

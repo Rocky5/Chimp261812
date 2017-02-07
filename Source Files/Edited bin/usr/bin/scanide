@@ -7,7 +7,7 @@ if [ "$lockhda" == "Security level high" ]; then
 	echo "Locked - Security level high" > /tmp/scanhda
 	lockhda=$(cat /tmp/scanhda)
 else
-	/sbin/hdparm -I /dev/hda | grep "Security level maximum" > /tmp/scanhda
+	/sbin/hdparm -I /dev/hda | grep -o "Security level maximum" > /tmp/scanhda
 	lockhda=$(cat /tmp/scanhda)
 	if [ "$lockhda" == "Security level maximum" ]; then
 		echo "Locked - Security level maximum" > /tmp/scanhda

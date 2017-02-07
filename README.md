@@ -8,6 +8,13 @@ https://www.youtube.com/watch?v=lBC9599ww6I
 
 
 ==================================================================
+Another small update - 7/02/2017:
+==================================================================
+Fixed the master HDD not displaying as locked if its security level was maximum.
+( wont make a difference since the user cant unlock the drive )
+
+
+==================================================================
 Another small update - 12/01/2017:
 ==================================================================
 
