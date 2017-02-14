@@ -100,24 +100,24 @@ lparthdb_menu=`cat /tmp/lparthdb_menu`
 case $lparthdb_menu in
 	1)	
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 0; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 0; test $? -eq 0 && /usr/bin/partinfohdb;
 		main_menu ;;
 	2)	
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 1; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 1; test $? -eq 0 && /usr/bin/partinfohdb;
 		main_menu ;;
 	3)	
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 2; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 2; test $? -eq 0 && /usr/bin/partinfohdb;
 		main_menu ;;
 	4)	
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 3; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hdb 3; test $? -eq 0 && /usr/bin/partinfohdb;
 		main_menu ;;
 	5)	
 		get_size
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper customfg /dev/hdb $desiredsize; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hdb`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper customfg /dev/hdb $desiredsize; test $? -eq 0 && /usr/bin/partinfohdb;
 		main_menu ;;
 	6)	
 		return;;

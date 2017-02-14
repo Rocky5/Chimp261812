@@ -8,6 +8,15 @@ https://www.youtube.com/watch?v=lBC9599ww6I
 
 
 ==================================================================
+Another small update - 14/02/2017:
+==================================================================
+Redone the Partition information screen, now shows information in a nice manor.
+Added a check to see if its a CD-ROM or a hard drive when loading.
+( this stops any errors appearing if you are using chimp with a DVD drive connected )
+Added a check for maximum lock status when selecting clone from the menu.
+
+
+==================================================================
 Another small update - 7/02/2017:
 ==================================================================
 Fixed the master HDD not displaying as locked if its security level was maximum.

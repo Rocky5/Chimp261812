@@ -26,11 +26,18 @@ gcd ()
   done                    # Euclid's algorithm
 }                         # Last $dividend is the gcd.
 
-/usr/bin/hdsecinfo /dev/hdb | grep "Security level : high" > /tmp/hdlock
+/sbin/hdparm -I /dev/hdb | grep -o "Security level high" > /tmp/hdlock
 lockhdb=$(cat /tmp/hdlock)
 if [ -n "$lockhdb" ]; then
 	slave_lock_status="locked"
 	rm -f /tmp/hdlock > /dev/null 2>&1
+else
+	/sbin/hdparm -I /dev/hdb | grep -o "Security level maximum" > /tmp/hdlock
+	lockhdb=$(cat /tmp/hdlock)
+	if [ -n "$lockhdb" ]; then
+		slave_lock_status="locked"
+		rm -f /tmp/hdlock > /dev/null 2>&1
+	fi
 fi
 
 get_size() {
@@ -260,7 +267,6 @@ if [ "$full_clone" == "" ]; then
 		"2" "C, E & F" off \
 		"3" "C, E, F & G" off \
 		"4" "C, E, F & G takes remaining space" off \
-		"5" "Advanced" off \
 		2> /tmp/cloneab_menu
 	case $? in
 		0)	parts_to_clone=$(cat /tmp/cloneab_menu);;
@@ -396,3 +402,4 @@ fi
 fi
 fi
 clear
+

@@ -100,24 +100,24 @@ lparthda_menu=`cat /tmp/lparthda_menu`
 case $lparthda_menu in
 	1)	
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hda 0; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hda`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hda 0; test $? -eq 0 && /usr/bin/partinfohda;
 		main_menu ;;
 	2)	
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hda 1; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hda`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hda 1; test $? -eq 0 && /usr/bin/partinfohda;
 		main_menu ;;
 	3)	
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hda 2; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hda`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hda 2; test $? -eq 0 && /usr/bin/partinfohda;
 		main_menu ;;
 	4)	
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hda 3; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hda`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper preparefg /dev/hda 3; test $? -eq 0 && /usr/bin/partinfohda;
 		main_menu ;;
 	5)	
 		get_size
 		dialog --defaultno --yesno "Confirm format?" 0 0
-		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper customfg /dev/hda $desiredsize; test $? -eq 0 && dialog --msgbox "`/usr/bin/xboxdumper listpartitions /dev/hda`" 0 0;
+		test $? -eq 0 && $Colour && clear && echo -e "\n" && /usr/bin/xboxdumper customfg /dev/hda $desiredsize; test $? -eq 0 && /usr/bin/partinfohda;
 		main_menu ;;
 	6)	
 		return;;

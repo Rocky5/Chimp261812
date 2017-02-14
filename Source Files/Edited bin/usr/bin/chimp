@@ -28,49 +28,57 @@ fi
 }
 slave_lock_status() {
 # hdb Slave Drive
-/sbin/hdparm -I /dev/hdb | grep -o "Security level high" > /tmp/scanhdb
-lockhdb=$(cat /tmp/scanhdb)
-if [ "$lockhdb" == "Security level high" ]; then
-	echo "Locked - Security level high" > /tmp/scanhdb
-	lockhdb=$(cat /tmp/scanhdb)
-	rm -f /tmp/scanhdb > /dev/null 2>&1
+/sbin/hdparm -I /dev/hdb | grep -o "CD-ROM ATAPI" > /tmp/scanhdb
+iscdrom=$(cat /tmp/scanhdb)
+if [ "$iscdrom" == "CD-ROM ATAPI" ]; then
+	iscdrom="True"
+	Disable_Cloning_Features="True"
 else
-	/sbin/hdparm -I /dev/hdb | grep -o "Security level maximum" > /tmp/scanhdb
+	/sbin/hdparm -I /dev/hdb | grep -o "Security level high" > /tmp/scanhdb
 	lockhdb=$(cat /tmp/scanhdb)
-	if [ "$lockhdb" == "Security level maximum" ]; then
-		echo "Locked - Security level maximum" > /tmp/scanhdb
+	if [ "$lockhdb" == "Security level high" ]; then
+		echo "Locked - Security level high" > /tmp/scanhdb
 		lockhdb=$(cat /tmp/scanhdb)
-		rm -f /tmp/scanhdb > /dev/null 2>&1
 	else
-		echo "Unlocked" > /tmp/scanhdb
+		/sbin/hdparm -I /dev/hdb | grep "Security level maximum" > /tmp/scanhdb
 		lockhdb=$(cat /tmp/scanhdb)
-		rm -f /tmp/scanhdb > /dev/null 2>&1
+		if [ "$lockhdb" == "Security level maximum" ]; then
+			echo "Locked - Security level maximum" > /tmp/scanhdb
+			lockhdb=$(cat /tmp/scanhdb)
+		else
+			echo "Unlocked" > /tmp/scanhdb
+			lockhdb=$(cat /tmp/scanhdb)
+		fi
 	fi
 fi
 }
 ###############################################################################################################
 eval "slave_lock_status" ;
-if [ "$lockhdb" == "Unlocked" ] ; then
-	echo "y" | hdtool2 -a -d /dev/hdb -o lock > /tmp/hdtool2.log
-	Check_Lock_Status1=`grep -o "Command completed successfully" /tmp/hdtool2.log`
-	if [ "$Check_Lock_Status1" == "Command completed successfully" ]; then
-		echo "y" | hdtool2 -a -d /dev/hdb -o disable-pw > /tmp/hdtool2.log
-		rm -f /tmp/hdtool2.log > /dev/null 2>&1
-	else
-		hdtool -a -o lock /dev/hdb > /tmp/hdtool2.log
-		Check_Lock_Status2=`grep -o "Command completed successfully" /tmp/hdtool2.log`
-		if [ "$Check_Lock_Status2" == "Command completed successfully" ]; then
-			hdtool -a -o disable-pw /dev/hdb > /tmp/hdtool2.log
+if [ "$iscdrom" == "True" ] ; then 
+	Disable_Cloning_Features="True"
+else
+	if [ "$lockhdb" == "Unlocked" ] ; then
+		echo "y" | hdtool2 -a -d /dev/hdb -o lock > /tmp/hdtool2.log
+		Check_Lock_Status1=`grep -o "Command completed successfully" /tmp/hdtool2.log`
+		if [ "$Check_Lock_Status1" == "Command completed successfully" ]; then
+			echo "y" | hdtool2 -a -d /dev/hdb -o disable-pw > /tmp/hdtool2.log
 			rm -f /tmp/hdtool2.log > /dev/null 2>&1
 		else
-			Disable_Cloning_Features="True"
-			rm -f /tmp/hdtool2.log > /dev/null 2>&1
+			hdtool -a -o lock /dev/hdb > /tmp/hdtool2.log
+			Check_Lock_Status2=`grep -o "Command completed successfully" /tmp/hdtool2.log`
+			if [ "$Check_Lock_Status2" == "Command completed successfully" ]; then
+				hdtool -a -o disable-pw /dev/hdb > /tmp/hdtool2.log
+				rm -f /tmp/hdtool2.log > /dev/null 2>&1
+			else
+				Disable_Cloning_Features="True"
+				rm -f /tmp/hdtool2.log > /dev/null 2>&1
+			fi
 		fi
+	else
+		dialog --infobox "Slave HD is locked.\nPlease unlock the HD first." 0 0
+		sleep 3
+		main_menu
 	fi
-else
-	dialog --infobox "Slave HD is locked.\nPlease unlock the HD first." 0 0
-	sleep 3
-	main_menu
 fi
 ###############################################################################################################
 reboot() {
@@ -86,7 +94,7 @@ slave_partition_status() {
 /usr/bin/xboxdumper listpartitions /dev/hdb 0 0 | grep "Error in listing partitions" > /tmp/partinfo
 partinfo=$(cat /tmp/partinfo)
 if [ -z "$partinfo" ]; then
-	dialog --msgbox "`xboxdumper listpartitions /dev/hdb`" 0 0
+	/usr/bin/partinfohdb
 	rm -f /tmp/partinfo > /dev/null 2>&1
 else
 	dialog --title "ERROR - XBP Partition table not found" --msgbox "\n1. This HD was formatted with UnleashX or EvolutionX.\n   Note: Standard Xbox partitions will be present.\n\n2. If this is a new HD then there is no partition\n   table." 0 0
@@ -97,7 +105,7 @@ master_partition_status() {
 /usr/bin/xboxdumper listpartitions /dev/hda 0 0 | grep "Error in listing partitions" > /tmp/partinfo
 partinfo=$(cat /tmp/partinfo)
 if [ -z "$partinfo" ]; then
-	dialog --msgbox "`xboxdumper listpartitions /dev/hda`" 0 0
+	/usr/bin/partinfohda
 	rm -f /tmp/partinfo > /dev/null 2>&1
 else
 	dialog --title "ERROR - XBP Partition table not found" --msgbox "\n1. This HD was formatted with UnleashX or EvolutionX.\n   Note: Standard Xbox partitions will be present.\n\n2. If this is a new HD then there is no partition\n   table." 0 0
@@ -412,7 +420,13 @@ else
 fi
 ###############################################################################################################
 if test -f "/tmp/softmodmode" ; then 
-	if [ "$Disable_Cloning_Features" == "True" ] ; then dialog --title 'Slave Drive Alert' --msgbox "Error: HDTool failed to lock the HDD.\n\nSlave device cannot be locked. Some menu items are disabled." 0 0 ; fi
+	if [ "$iscdrom" == "True" ] ; then 
+		pass ;
+	else
+		if [ "$Disable_Cloning_Features" == "True" ] ; then 
+			dialog --title 'Slave Drive Alert' --msgbox "Error: HDTool failed to lock the HDD.\n\nSlave device cannot be locked. Some menu items are disabled." 0 0 ;
+		fi
+	fi
 	main_menu() {
 	local main_menu=1
 	if [ "$Disable_Cloning_Features" == "True" ] ; then
