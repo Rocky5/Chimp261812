@@ -4,40 +4,40 @@ dialog --title "" --infobox "Gathering info please wait..." 3 35
 
 xboxdumper listpartitions /dev/hda > /tmp/partinfo
 # C partition 500MB
-C_Part_ClusterSize=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 1" | awk  '{print $9}'`
-C_Part_Size=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 1" | awk  '{print $6}'`
+C_Part_ClusterSize=`grep -rw '/tmp/partinfo' -e "partition 1" | awk  '{print $9}'`
+C_Part_Size=`grep -rw '/tmp/partinfo' -e "partition 1" | awk  '{print $6}'`
 C_Part_SizeNoZero=$(echo $C_Part_Size | sed 's/^0*//')
 C_Part_SizeMB=`echo "${C_Part_SizeNoZero//MB}" | awk  '{ print $1 * 1000 / 1000 }'`
 # E partition 4.8GB
-E_Part_ClusterSize=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 0" | awk  '{print $9}'`
-E_Part_SizeMB=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 0" | awk  '{print $6}'`
+E_Part_ClusterSize=`grep -rw '/tmp/partinfo' -e "partition 0" | awk  '{print $9}'`
+E_Part_SizeMB=`grep -rw '/tmp/partinfo' -e "partition 0" | awk  '{print $6}'`
 E_Part_SizeNoZero=$(echo $E_Part_SizeMB | sed 's/^0*//')
 E_Part_SizeGB=`echo "${E_Part_SizeNoZero//MB}" | awk  '{ print $1 / 1000 }'`
 # X partition 750MB
-X_Part_ClusterSize=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 2" | awk  '{print $9}'`
-X_Part_SizeMB=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 2" | awk  '{print $6}'`
+X_Part_ClusterSize=`grep -rw '/tmp/partinfo' -e "partition 2" | awk  '{print $9}'`
+X_Part_SizeMB=`grep -rw '/tmp/partinfo' -e "partition 2" | awk  '{print $6}'`
 X_Part_SizeNoZero=$(echo $X_Part_SizeMB | sed 's/^0*//')
 X_Part_SizeGB=`echo "${X_Part_SizeNoZero//MB}" | awk  '{ print $1 * 1000 / 1000 }'`
 # Y partition 750MB
-Y_Part_ClusterSize=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 3" | awk  '{print $9}'`
-Y_Part_SizeMB=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 3" | awk  '{print $6}'`
+Y_Part_ClusterSize=`grep -rw '/tmp/partinfo' -e "partition 3" | awk  '{print $9}'`
+Y_Part_SizeMB=`grep -rw '/tmp/partinfo' -e "partition 3" | awk  '{print $6}'`
 Y_Part_SizeNoZero=$(echo $Y_Part_SizeMB | sed 's/^0*//')
 Y_Part_SizeGB=`echo "${Y_Part_SizeNoZero//MB}" | awk  '{ print $1 * 1000 / 1000 }'`
 # Z partition 750MB
-Z_Part_ClusterSize=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 4" | awk  '{print $9}'`
-Z_Part_SizeMB=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 4" | awk  '{print $6}'`
+Z_Part_ClusterSize=`grep -rw '/tmp/partinfo' -e "partition 4" | awk  '{print $9}'`
+Z_Part_SizeMB=`grep -rw '/tmp/partinfo' -e "partition 4" | awk  '{print $6}'`
 Z_Part_SizeNoZero=$(echo $Z_Part_SizeMB | sed 's/^0*//')
 Z_Part_SizeGB=`echo "${Z_Part_SizeNoZero//MB}" | awk  '{ print $1 * 1000 / 1000 }'`
 # F partition varies
-F_Part=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 5" | awk  '{print $1$2}'`
-F_Part_ClusterSize=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 5" | awk  '{print $9}'`
-F_Part_SizeMB=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 5" | awk  '{print $6}'`
+F_Part=`grep -rw '/tmp/partinfo' -e "partition 5" | awk  '{print $1$2}'`
+F_Part_ClusterSize=`grep -rw '/tmp/partinfo' -e "partition 5" | awk  '{print $9}'`
+F_Part_SizeMB=`grep -rw '/tmp/partinfo' -e "partition 5" | awk  '{print $6}'`
 F_Part_SizeNoZero=$(echo $F_Part_SizeMB | sed 's/^0*//')
 F_Part_SizeGB=`echo "${F_Part_SizeNoZero//MB}" | awk  '{ print $1 / 1000 }'`
 # G partition varies
-G_Part=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 6" | awk  '{print $1$2}'`
-G_Part_ClusterSize=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 6" | awk  '{print $9}'`
-G_Part_SizeMB=`xboxdumper listpartitions /dev/hda | grep -rw '/tmp/partinfo' -e "partition 6" | awk  '{print $6}'`
+G_Part=`grep -rw '/tmp/partinfo' -e "partition 6" | awk  '{print $1$2}'`
+G_Part_ClusterSize=`grep -rw '/tmp/partinfo' -e "partition 6" | awk  '{print $9}'`
+G_Part_SizeMB=`grep -rw '/tmp/partinfo' -e "partition 6" | awk  '{print $6}'`
 G_Part_SizeNoZero=$(echo $G_Part_SizeMB | sed 's/^0*//')
 G_Part_SizeGB=`echo "${G_Part_SizeNoZero//MB}" | awk  '{ print $1 / 1000 }'`
 

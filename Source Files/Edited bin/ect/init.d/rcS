@@ -3,11 +3,9 @@
 clear
 echo
 echo
-echo
-echo
-echo
-echo
-echo
+echo //////////////////
+echo // Chimp 261812
+echo ///////////////
 echo "Disabling the bloody cursor!"
 echo -n -e "\033[?25l"
 
