@@ -8,6 +8,13 @@ https://www.youtube.com/watch?v=lBC9599ww6I
 
 
 ==================================================================
+Small update - 23/02/2017:
+==================================================================
+Changed the partition that the external eeprom.bin is placed as the fatx driver for linux is not the greatest and can fail to show all files if there are a lot of files/folders on the partition.
+( So now its Y:\eeprom.bin )
+
+
+==================================================================
 Another small update - 15/02/2017:
 ==================================================================
 Forgot the remove a part of the new partition info code, all fixed now.

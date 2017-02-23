@@ -114,10 +114,10 @@ fi
 }
 ###############################################################################################################
 check_fatx_eeprom() {
-mkdir -p /tmp/E
-mount -r -t fatx /dev/hda50 /tmp/E
-[ -f "/tmp/E/eeprom.bin" ] && cp -f "/tmp/E/eeprom.bin" "/tmp/E:\eeprom.bin"
-#dialog --msgbox "  Found E:\eeprom.bin" 5 30 
+mkdir -p /tmp/Y
+mount -r -t fatx /dev/hda53 /tmp/Y
+[ -f "/tmp/Y/eeprom.bin" ] && cp -f "/tmp/Y/eeprom.bin" "/tmp/Y:\eeprom.bin"
+#dialog --msgbox "  Found Y:\eeprom.bin" 5 30 
 }
 ###############################################################################################################
 network_settings_menu() {
@@ -133,7 +133,7 @@ local lock_unlock_hda_menu=1
 dialog --nocancel --title "Master HD locking options" --menu "Where is the key source " 0 0 0 \
 	1 "From Motherboard" \
 	2 "From /tmp/eeprom.bin" \
-	3 "From Xbox HD E:\eeprom.bin" \
+	3 "From Xbox HD Y:\eeprom.bin" \
 	4 "From Master password:XBOXSCENE" \
 	5 "From Master password:TEAMASSEMBLY" \
 	6 "From /tmp/hddkey.txt" \
@@ -147,8 +147,8 @@ case $lock_unlock_hda_menu in
 		key_src=/tmp/eeprom.bin ;;
 	3)	
 		eval "check_fatx_eeprom" ;
-		key_src="E:\eeprom.bin" ;
-		umount /tmp/E ;;
+		key_src="Y:\eeprom.bin" ;
+		umount /tmp/Y ;;
 	4)	
 		key_src=XBOXSCENE ;;
 	5)	
@@ -165,7 +165,7 @@ local lock_unlock_hdb_menu=1
 dialog --nocancel --title "Slave HD locking options" --menu "Where is the key source " 0 0 0 \
 	1 "From Motherboard" \
 	2 "From /tmp/eeprom.bin" \
-	3 "From Xbox HD E:\eeprom.bin" \
+	3 "From Xbox HD Y:\eeprom.bin" \
 	4 "From Master password:XBOXSCENE" \
 	5 "From Master password:TEAMASSEMBLY" \
 	6 "From /tmp/hddkey.txt" \
@@ -179,8 +179,8 @@ case $lock_unlock_hdb_menu in
 		key_src=/tmp/eeprom.bin ;;
 	3)	
 		eval "check_fatx_eeprom" ;
-		key_src="E:\eeprom.bin" ;
-		umount /tmp/E ;;
+		key_src="Y:\eeprom.bin" ;
+		umount /tmp/Y ;;
 	4)	
 		key_src=XBOXSCENE ;;
 	5)	
