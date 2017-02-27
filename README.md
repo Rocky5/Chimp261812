@@ -8,6 +8,12 @@ https://www.youtube.com/watch?v=lBC9599ww6I
 
 
 ==================================================================
+Small fix - 27/02/2017:
+==================================================================
+Fixed the cloning of the G partition :\
+
+
+==================================================================
 Small update - 23/02/2017:
 ==================================================================
 Changed the partition that the external eeprom.bin is placed as the fatx driver for linux is not the greatest and can fail to show all files if there are a lot of files/folders on the partition.

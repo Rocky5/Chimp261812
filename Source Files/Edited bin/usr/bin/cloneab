@@ -211,7 +211,7 @@ case $i in
 			#######################################################	
 
 	*G*) 	dd if=$SRC bs=1 skip=240 count=32 seek=240 of=$TARGET 2>/dev/null ;
-			dd if=$TARGET bs=512 count=1 2> /dev/null | hexdump | grep "0000 8000" | awk '{ if (NR == 6) print $5 $4" "$7 $6; }' | while read POFFSET PSIZE ;
+			dd if=$TARGET bs=512 count=1 2> /dev/null | hexdump | grep "0000 8000" | awk '{ if (NR == 7) print $5 $4" "$7 $6; }' | while read POFFSET PSIZE ;
 			do clear ;
 			#######################################################
 			Partition_Offset=$((0x$POFFSET))
