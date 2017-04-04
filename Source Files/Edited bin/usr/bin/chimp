@@ -40,7 +40,7 @@ else
 		echo "Locked - Security level high" > /tmp/scanhdb
 		lockhdb=$(cat /tmp/scanhdb)
 	else
-		/sbin/hdparm -I /dev/hdb | grep "Security level maximum" > /tmp/scanhdb
+		/sbin/hdparm -I /dev/hdb | grep -o "Security level maximum" > /tmp/scanhdb
 		lockhdb=$(cat /tmp/scanhdb)
 		if [ "$lockhdb" == "Security level maximum" ]; then
 			echo "Locked - Security level maximum" > /tmp/scanhdb

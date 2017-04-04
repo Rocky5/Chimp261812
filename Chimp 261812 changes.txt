@@ -1,4 +1,11 @@
 ==================================================================
+Small fix - 04/04/2017:
+==================================================================
+Fixed the slave drive not showing the correct lock status for maximum lock.
+( Life has been a bit shity lately so sorry )
+
+
+==================================================================
 Small fix - 27/02/2017:
 ==================================================================
 Fixed the cloning of the G partition :\
