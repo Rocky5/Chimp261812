@@ -8,6 +8,13 @@ https://www.youtube.com/watch?v=lBC9599ww6I
 
 
 ==================================================================
+Small update - 24/07/2017:
+==================================================================
+Added the new XBE files that lets you swap the HDD after Chimp Loader has loaded.
+( Also updated the source )
+
+
+==================================================================
 Small fix - 04/04/2017:
 ==================================================================
 Fixed the slave drive not showing the correct lock status for maximum lock.
