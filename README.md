@@ -6,6 +6,10 @@ This Xbox Application is used to clone Xbox hard drives via the Xbox itself.
 How to clone your Hard drive using Chimp 261812 from start to finish.
 https://www.youtube.com/watch?v=lBC9599ww6I
 
+### Contributions
+ If you'd like to say thanks by sending a small donation, it'd be a huge help, and it'll allow me to keep spending time towards contributing to the Xbox community in the future.
+
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=65NJWU9PUUX7W&lc=GB&currency_code=GBP&bn=PP%2dDonationsBF%3abtn_donate_LG%2egif%3aNonHosted)
 
 ==================================================================
 Small update - 24/07/2017:
